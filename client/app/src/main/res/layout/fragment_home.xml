@@ -11,7 +11,7 @@
         android:orientation="vertical"
         android:padding="16dp">
 
-        <!-- ── Connection Status Card ─────────────────────── -->
+        <!-- Connection Status Card -->
         <LinearLayout
             android:id="@+id/cardConnection"
             android:layout_width="match_parent"
@@ -79,7 +79,7 @@
                 android:fontFamily="monospace" />
         </LinearLayout>
 
-        <!-- ── Today's Stats Row ──────────────────────────── -->
+        <!-- Today's Stats Row -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -184,7 +184,7 @@
             </LinearLayout>
         </LinearLayout>
 
-        <!-- ── SIM Cards ──────────────────────────────────── -->
+        <!-- SIM Cards -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -202,7 +202,7 @@
             android:orientation="vertical"
             android:layout_marginBottom="10dp" />
 
-        <!-- ── Device Info ─────────────────────────────────── -->
+        <!-- Device Info -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

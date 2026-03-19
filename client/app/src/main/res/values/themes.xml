@@ -36,7 +36,7 @@
         <item name="snackbarStyle">@style/Widget.ApiX.Snackbar</item>
     </style>
 
-    <!-- ── Shapes ─────────────────────────────────────────── -->
+    <!-- Shapes -->
     <style name="ShapeSmall" parent="ShapeAppearance.MaterialComponents.SmallComponent">
         <item name="cornerSize">8dp</item>
     </style>
@@ -44,7 +44,7 @@
         <item name="cornerSize">12dp</item>
     </style>
 
-    <!-- ── Card ──────────────────────────────────────────── -->
+    <!-- Card -->
     <style name="Widget.ApiX.Card" parent="Widget.MaterialComponents.CardView">
         <item name="cardBackgroundColor">@color/surface1</item>
         <item name="strokeColor">@color/border1</item>
@@ -53,7 +53,7 @@
         <item name="cardElevation">0dp</item>
     </style>
 
-    <!-- ── Bottom Navigation ─────────────────────────────── -->
+    <!-- Bottom Navigation -->
     <style name="Widget.ApiX.BottomNav" parent="Widget.MaterialComponents.BottomNavigationView">
         <item name="android:background">@color/bg2</item>
         <item name="itemTextColor">@color/bnv_text_color</item>
@@ -62,18 +62,18 @@
         <item name="android:minHeight">64dp</item>
     </style>
 
-    <!-- ── Toolbar ────────────────────────────────────────── -->
+    <!-- Toolbar -->
     <style name="Widget.ApiX.Toolbar" parent="Widget.MaterialComponents.Toolbar">
         <item name="android:background">@color/bg2</item>
         <item name="titleTextColor">@color/text_primary</item>
     </style>
 
-    <!-- ── Snackbar ───────────────────────────────────────── -->
+    <!-- Snackbar -->
     <style name="Widget.ApiX.Snackbar" parent="Widget.MaterialComponents.Snackbar">
         <item name="android:background">@color/surface2</item>
     </style>
 
-    <!-- ── Button styles ─────────────────────────────────── -->
+    <!-- Button styles -->
     <style name="Widget.ApiX.Button.Primary" parent="Widget.MaterialComponents.Button">
         <item name="android:backgroundTint">@color/accent_blue</item>
         <item name="android:textColor">@color/white</item>
@@ -85,7 +85,7 @@
         <item name="cornerRadius">8dp</item>
     </style>
 
-    <!-- ── Text styles ───────────────────────────────────── -->
+    <!-- Text styles -->
     <style name="TextStyle.ApiX.Label" parent="">
         <item name="android:textColor">@color/text_hint</item>
         <item name="android:textSize">9sp</item>
@@ -105,7 +105,7 @@
         <item name="android:fontFamily">monospace</item>
     </style>
 
-    <!-- ── Discover activity ─────────────────────────────── -->
+    <!-- Discover activity -->
     <style name="Theme.ApiX.Discover" parent="Theme.ApiX">
         <item name="android:windowBackground">@color/bg</item>
     </style>
