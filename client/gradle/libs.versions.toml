@@ -35,5 +35,4 @@ swiperefreshlayout         = { group = "androidx.swiperefreshlayout", name = "sw
 multidex                   = { group = "androidx.multidex",            name = "multidex",                     version.ref = "multidex" }
 
 [plugins]
-android-application = { id = "com.android.application",        version.ref = "agp" }
-kotlin-android      = { id = "org.jetbrains.kotlin.android",   version.ref = "kotlin" }
+android-application = { id = "com.android.application", version.ref = "agp" }
