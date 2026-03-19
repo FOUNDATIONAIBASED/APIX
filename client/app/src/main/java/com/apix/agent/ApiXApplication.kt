@@ -1,11 +1,9 @@
 package com.apix.agent
 
+import android.app.Application
 import android.util.Log
-import androidx.multidex.MultiDexApplication
 
-// MultiDexApplication is required for API < 21 (Dalvik VM) to exceed the 64K method limit.
-// On API 21+ (ART), this is a no-op.
-class ApiXApplication : MultiDexApplication() {
+class ApiXApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()

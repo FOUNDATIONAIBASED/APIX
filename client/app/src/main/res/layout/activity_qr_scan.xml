@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@color/bg1">
+    android:background="@color/bg">
 
     <!-- ZXing Embedded scanner view fills most of the screen -->
     <com.journeyapps.barcodescanner.DecoratedBarcodeView
@@ -23,7 +23,7 @@
         android:gravity="center"
         android:textSize="14sp"
         android:lineSpacingMultiplier="1.4"
-        android:textColor="@color/text1"
+        android:textColor="@color/text_primary"
         android:text="Point camera at the QR code shown in\nthe ApiX Gateway management console → Devices" />
 
 </LinearLayout>

@@ -10,8 +10,6 @@
         <item name="colorOnSecondary">@color/bg</item>
         <item name="colorSurface">@color/surface1</item>
         <item name="colorOnSurface">@color/text_primary</item>
-        <item name="colorBackground">@color/bg</item>
-        <item name="colorOnBackground">@color/text_primary</item>
         <item name="colorError">@color/accent_red</item>
         <item name="android:windowBackground">@color/bg</item>
         <item name="android:statusBarColor">@color/bg2</item>

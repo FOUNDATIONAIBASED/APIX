@@ -12,8 +12,6 @@
         <item name="colorOnSecondary">@color/bg</item>
         <item name="colorSurface">@color/surface1</item>
         <item name="colorOnSurface">@color/text_primary</item>
-        <item name="colorBackground">@color/bg</item>
-        <item name="colorOnBackground">@color/text_primary</item>
         <item name="colorError">@color/accent_red</item>
         <item name="colorOnError">@color/white</item>
         <!-- Window -->
@@ -56,8 +54,8 @@
     <!-- Bottom Navigation -->
     <style name="Widget.ApiX.BottomNav" parent="Widget.MaterialComponents.BottomNavigationView">
         <item name="android:background">@color/bg2</item>
-        <item name="itemTextColor">@color/bnv_text_color</item>
-        <item name="itemIconTint">@color/bnv_text_color</item>
+        <item name="itemTextColor">@drawable/bnv_text_color</item>
+        <item name="itemIconTint">@drawable/bnv_text_color</item>
         <item name="itemRippleColor">@color/accent_blue</item>
         <item name="android:minHeight">64dp</item>
     </style>

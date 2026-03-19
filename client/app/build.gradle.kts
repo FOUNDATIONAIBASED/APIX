@@ -9,7 +9,6 @@ android {
     defaultConfig {
         applicationId   = "com.apix.agent"
         minSdk          = 21
-        multiDexEnabled = true
         targetSdk       = 36
         versionCode     = (project.findProperty("android.versionCode") as String?)?.toIntOrNull() ?: 1
         versionName     = (project.findProperty("android.versionName") as String?) ?: "2.0.0"
@@ -71,7 +70,6 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.gson)
     implementation(libs.swiperefreshlayout)
-    implementation(libs.multidex)
 
     // QR code scanning for device pairing (works from API 14+)
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
