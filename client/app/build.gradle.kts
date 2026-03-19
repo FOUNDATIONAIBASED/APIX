@@ -8,7 +8,7 @@ android {
 
     defaultConfig {
         applicationId   = "com.apix.agent"
-        minSdk          = 18
+        minSdk          = 21
         multiDexEnabled = true
         targetSdk       = 36
         versionCode     = (project.findProperty("android.versionCode") as String?)?.toIntOrNull() ?: 1
@@ -49,6 +49,7 @@ android {
 
     buildFeatures {
         viewBinding = true
+        buildConfig = true
     }
 
     compileOptions {
