@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ApiX Gateway — Campaign Management</title>
+<link href="https://fonts.googleapis.com/css2?family=Azeret+Mono:ital,wght@0,300;0,400;0,500;0,700;1,400&family=Epilogue:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:      #07090f;
+  --bg2:     #0b0e18;
+  --bg3:     #0f1320;
+  --s1:      #131a2c;
+  --s2:      #182036;
+  --s3:      #1e2842;
+  --b1:      #1c2640;
+  --b2:      #253354;
+  --b3:      #2e3e66;
+  --c1: #3b82f6;   /* blue */
+  --c2: #1d4ed8;
+  --c3: #22d3ee;   /* cyan */
+  --c4: #10b981;   /* emerald */
+  --c5: #f59e0b;   /* amber */
+  --c6: #ef4444;   /* red */
+  --c7: #8b5cf6;   /* violet */
+  --c8: #f97316;   /* orange */
+  --tx:  #e1e8f5;
+  --tx2: #7e95bb;
+  --tx3: #3d5070;
+  --ok:   #10b981;
+  --warn: #f59e0b;
+  --err:  #ef4444;
+  --fm: 'Azeret Mono', monospace;
+  --fb: 'Epilogue', sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;font-family:var(--fb);background:var(--bg);color:var(--tx);overflow-x:hidden;}
+
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;
+  background:
+    radial-gradient(ellipse 60% 40% at 15% 20%, rgba(59,130,246,0.06) 0%,transparent 70%),
+    radial-gradient(ellipse 50% 30% at 85% 70%, rgba(139,92,246,0.05) 0%,transparent 70%);
+}
+
+/* ── LAYOUT ── */
+.shell{display:flex;height:100vh;overflow:hidden;}
+
+/* ── SIDEBAR ── */
+.side{
+  width:220px;flex-shrink:0;
+  background:var(--bg2);border-right:1px solid var(--b1);
+  display:flex;flex-direction:column;overflow:hidden;
+}
+.side-logo{
+  padding:16px 18px;border-bottom:1px solid var(--b1);
+  display:flex;align-items:center;gap:10px;
+}
+.lmark{
+  width:34px;height:34px;border-radius:9px;
+  background:linear-gradient(135deg,var(--c1),var(--c7));
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--fm);font-weight:700;font-size:13px;color:#fff;
+  box-shadow:0 0 18px rgba(59,130,246,0.3);
+}
+.lname{font-family:var(--fm);font-weight:700;font-size:16px;letter-spacing:-0.5px;}
+.lname em{color:var(--c3);font-style:normal;}
+.lver{font-size:9px;color:var(--tx3);letter-spacing:2px;font-family:var(--fm);margin-top:1px;}
+
+.side-nav{flex:1;padding:10px 8px;overflow-y:auto;}
+.sn-group{font-size:9px;letter-spacing:2px;color:var(--tx3);padding:12px 10px 5px;font-family:var(--fm);}
+.sn-item{
+  display:flex;align-items:center;gap:8px;padding:8px 10px;
+  border-radius:8px;margin:1px 0;cursor:pointer;font-size:12.5px;
+  color:var(--tx2);transition:all 0.15s;border:1px solid transparent;font-weight:500;
+}
+.sn-item:hover{background:var(--s1);color:var(--tx);}
+.sn-item.on{background:rgba(59,130,246,0.1);color:var(--c1);border-color:rgba(59,130,246,0.2);}
+.sn-item svg{width:14px;height:14px;opacity:0.7;flex-shrink:0;}
+.sn-badge{margin-left:auto;font-size:9px;padding:1px 6px;border-radius:8px;font-family:var(--fm);font-weight:700;}
+.sn-badge.blue{background:var(--c1);color:#fff;}
+.sn-badge.green{background:var(--c4);color:#fff;}
+.sn-badge.amber{background:var(--c5);color:#000;}
+
+/* ── MAIN ── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.topbar{
+  height:52px;background:var(--bg2);border-bottom:1px solid var(--b1);
+  display:flex;align-items:center;padding:0 22px;gap:12px;flex-shrink:0;
+}
+.tb-title{font-family:var(--fm);font-weight:700;font-size:14px;flex:1;letter-spacing:-0.3px;}
+.tb-title span{color:var(--tx3);font-weight:400;font-size:11px;margin-left:6px;}
+.live{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--c4);font-family:var(--fm);
+  background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);padding:3px 9px;border-radius:20px;}
+.ld{width:5px;height:5px;border-radius:50%;background:var(--c4);animation:blink 1.5s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+.tbtn{
+  background:var(--s1);border:1px solid var(--b2);color:var(--tx);
+  padding:6px 14px;border-radius:8px;font-size:12px;cursor:pointer;
+  font-family:var(--fb);font-weight:500;transition:all 0.15s;
+  display:flex;align-items:center;gap:5px;
+}
+.tbtn:hover{border-color:var(--c1);color:var(--c1);}
+.tbtn.p{background:linear-gradient(135deg,var(--c1),var(--c2));border:none;color:#fff;font-weight:600;box-shadow:0 0 14px rgba(59,130,246,0.25);}
+.tbtn.p:hover{box-shadow:0 0 22px rgba(59,130,246,0.4);transform:translateY(-1px);}
+.av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--c1),var(--c7));
+  display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;cursor:pointer;}
+
+.body{flex:1;overflow-y:auto;padding:20px 22px;}
+.body::-webkit-scrollbar{width:4px;}
+.body::-webkit-scrollbar-thumb{background:var(--b2);border-radius:2px;}
+
+/* ── VIEWS ── */
+.view{display:none;}
+.view.on{display:block;animation:fu 0.2s ease;}
+@keyframes fu{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── GRID ── */
+.g{display:grid;gap:12px;}
+.g4{grid-template-columns:repeat(4,1fr);}
+.g3{grid-template-columns:repeat(3,1fr);}
+.g2{grid-template-columns:1fr 1fr;}
+.g21{grid-template-columns:2fr 1fr;}
+.g12{grid-template-columns:1fr 2fr;}
+
+/* ── STAT CARD ── */
+.sc{
+  background:var(--s1);border:1px solid var(--b1);border-radius:12px;
+  padding:16px 18px;position:relative;overflow:hidden;
+}
+.sc::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.sc.blue::before{background:linear-gradient(90deg,var(--c1),transparent);}
+.sc.cyan::before{background:linear-gradient(90deg,var(--c3),transparent);}
+.sc.green::before{background:linear-gradient(90deg,var(--c4),transparent);}
+.sc.amber::before{background:linear-gradient(90deg,var(--c5),transparent);}
+.sc.violet::before{background:linear-gradient(90deg,var(--c7),transparent);}
+.sc.red::before{background:linear-gradient(90deg,var(--c6),transparent);}
+.sc-lbl{font-size:9px;color:var(--tx3);text-transform:uppercase;letter-spacing:2px;font-family:var(--fm);margin-bottom:7px;}
+.sc-val{font-family:var(--fm);font-size:28px;font-weight:700;line-height:1;margin-bottom:4px;}
+.sc-val.blue{color:var(--c1);}
+.sc-val.cyan{color:var(--c3);}
+.sc-val.green{color:var(--c4);}
+.sc-val.amber{color:var(--c5);}
+.sc-val.violet{color:var(--c7);}
+.sc-val.red{color:var(--c6);}
+.sc-d{font-size:11px;color:var(--ok);}
+.sc-d.dn{color:var(--err);}
+
+/* ── PANEL ── */
+.panel{background:var(--s1);border:1px solid var(--b1);border-radius:12px;overflow:hidden;}
+.ph{padding:12px 16px;border-bottom:1px solid var(--b1);display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.ph-t{font-family:var(--fm);font-weight:600;font-size:13px;}
+.ph-s{font-size:10px;color:var(--tx3);font-family:var(--fm);}
+.pb{padding:14px 16px;}
+
+/* ── BTN ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 15px;border-radius:8px;
+  font-size:12px;font-weight:600;cursor:pointer;transition:all 0.15s;font-family:var(--fb);border:none;}
+.btn.p{background:linear-gradient(135deg,var(--c1),var(--c2));color:#fff;box-shadow:0 0 12px rgba(59,130,246,0.2);}
+.btn.p:hover{box-shadow:0 0 20px rgba(59,130,246,0.35);transform:translateY(-1px);}
+.btn.g{background:transparent;border:1px solid var(--b2);color:var(--tx2);}
+.btn.g:hover{border-color:var(--c1);color:var(--c1);}
+.btn.danger{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:var(--c6);}
+.btn.sm{padding:5px 11px;font-size:11px;}
+.btn.xs{padding:3px 8px;font-size:10px;}
+
+/* ── CHIP ── */
+.chip{font-size:9px;padding:2px 7px;border-radius:5px;font-weight:700;
+  text-transform:uppercase;letter-spacing:0.5px;font-family:var(--fm);display:inline-flex;align-items:center;gap:3px;}
+.chip.running{background:rgba(16,185,129,0.12);color:var(--c4);border:1px solid rgba(16,185,129,0.25);}
+.chip.paused{background:rgba(245,158,11,0.12);color:var(--c5);border:1px solid rgba(245,158,11,0.25);}
+.chip.scheduled{background:rgba(59,130,246,0.12);color:var(--c1);border:1px solid rgba(59,130,246,0.25);}
+.chip.draft{background:rgba(139,92,246,0.12);color:var(--c7);border:1px solid rgba(139,92,246,0.25);}
+.chip.done{background:rgba(62,72,100,0.3);color:var(--tx3);border:1px solid var(--b2);}
+.chip.blue{background:rgba(59,130,246,0.1);color:var(--c1);border:1px solid rgba(59,130,246,0.2);}
+.chip.green{background:rgba(16,185,129,0.1);color:var(--c4);border:1px solid rgba(16,185,129,0.2);}
+.chip.amber{background:rgba(245,158,11,0.1);color:var(--c5);border:1px solid rgba(245,158,11,0.2);}
+.chip.violet{background:rgba(139,92,246,0.1);color:var(--c7);border:1px solid rgba(139,92,246,0.2);}
+.chip.red{background:rgba(239,68,68,0.1);color:var(--c6);border:1px solid rgba(239,68,68,0.2);}
+.chip.gray{background:var(--s2);color:var(--tx3);border:1px solid var(--b2);}
+
+/* ── FORM ── */
+.fg{margin-bottom:14px;}
+.fl{display:block;font-size:9px;color:var(--tx3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:5px;font-family:var(--fm);}
+.fi{width:100%;background:var(--bg3);border:1px solid var(--b2);border-radius:8px;
+  padding:9px 12px;color:var(--tx);font-family:var(--fb);font-size:13px;outline:none;transition:border-color 0.2s;}
+.fi:focus{border-color:rgba(59,130,246,0.45);box-shadow:0 0 0 3px rgba(59,130,246,0.06);}
+.fsel{width:100%;background:var(--bg3);border:1px solid var(--b2);border-radius:8px;
+  padding:9px 12px;color:var(--tx);font-family:var(--fb);font-size:13px;outline:none;cursor:pointer;}
+.fta{width:100%;background:var(--bg3);border:1px solid var(--b2);border-radius:8px;
+  padding:9px 12px;color:var(--tx);font-family:var(--fb);font-size:13px;outline:none;resize:vertical;transition:border-color 0.2s;min-height:90px;}
+.fta:focus{border-color:rgba(59,130,246,0.45);}
+.fi-row{display:flex;gap:10px;}
+.fi-row .fi,.fi-row .fsel{flex:1;}
+.fi-unit{
+  background:var(--s2);border:1px solid var(--b2);border-radius:8px;
+  padding:9px 12px;font-size:13px;color:var(--tx2);font-family:var(--fm);white-space:nowrap;
+}
+
+/* ── TOGGLE ── */
+.tog{width:36px;height:20px;border-radius:10px;cursor:pointer;position:relative;transition:background 0.2s;flex-shrink:0;}
+.tog.on{background:var(--c1);}
+.tog.off{background:var(--tx3);}
+.tog::after{content:'';position:absolute;top:3px;width:14px;height:14px;background:#fff;border-radius:50%;transition:left 0.2s;}
+.tog.on::after{left:19px;}
+.tog.off::after{left:3px;}
+
+/* ── PBAR ── */
+.pbar{height:5px;background:var(--b1);border-radius:3px;overflow:hidden;}
+.pf{height:100%;border-radius:3px;transition:width 0.5s;}
+.pf.blue{background:var(--c1);}
+.pf.green{background:var(--c4);}
+.pf.amber{background:var(--c5);}
+.pf.red{background:var(--c6);}
+.pf.violet{background:var(--c7);}
+
+/* ── SECTION HEADER ── */
+.sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.sh-t{font-family:var(--fm);font-size:14px;font-weight:700;}
+.sh-s{font-size:11px;color:var(--tx3);font-family:var(--fm);margin-top:1px;}
+
+/* ── CAMPAIGN CARD ── */
+.cc{
+  background:var(--bg3);border:1px solid var(--b1);border-radius:12px;
+  overflow:hidden;transition:border-color 0.2s;margin-bottom:10px;
+}
+.cc:hover{border-color:var(--b2);}
+.cc-head{
+  display:flex;align-items:flex-start;justify-content:space-between;
+  padding:14px 16px 10px;
+}
+.cc-meta{display:flex;align-items:center;gap:8px;margin-top:5px;flex-wrap:wrap;}
+.cc-name{font-size:14px;font-weight:700;font-family:var(--fm);}
+.cc-body{padding:0 16px 14px;}
+.cc-stats{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:12px;}
+.cc-stat{background:var(--s2);border-radius:8px;padding:8px 10px;}
+.cc-sv{font-family:var(--fm);font-size:17px;font-weight:700;line-height:1;}
+.cc-sl{font-size:9px;color:var(--tx3);text-transform:uppercase;letter-spacing:1px;font-family:var(--fm);margin-top:3px;}
+.cc-progress-row{display:flex;justify-content:space-between;font-size:10px;color:var(--tx3);margin-bottom:4px;font-family:var(--fm);}
+.cc-footer{
+  background:rgba(0,0,0,0.2);border-top:1px solid var(--b1);
+  padding:9px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+}
+.cc-num-chips{display:flex;gap:5px;flex-wrap:wrap;}
+
+/* ── NUMBER SELECTOR ── */
+.num-pool{display:flex;flex-direction:column;gap:6px;}
+.num-item{
+  display:flex;align-items:center;gap:10px;
+  background:var(--bg3);border:1px solid var(--b1);border-radius:9px;
+  padding:10px 13px;cursor:pointer;transition:all 0.15s;
+  position:relative;user-select:none;
+}
+.num-item:hover{border-color:var(--b2);}
+.num-item.sel{border-color:rgba(59,130,246,0.5);background:rgba(59,130,246,0.05);}
+.num-item.sel::after{
+  content:'✓';position:absolute;right:12px;top:50%;transform:translateY(-50%);
+  width:18px;height:18px;background:var(--c1);border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;
+  color:#fff;line-height:18px;text-align:center;
+}
+.num-check{width:18px;height:18px;border-radius:50%;border:1.5px solid var(--b3);flex-shrink:0;transition:all 0.15s;}
+.num-item.sel .num-check{background:var(--c1);border-color:var(--c1);}
+.num-icon{font-size:18px;flex-shrink:0;}
+.num-info{flex:1;min-width:0;}
+.num-main{font-family:var(--fm);font-size:12px;color:var(--c3);}
+.num-sub{font-size:11px;color:var(--tx3);margin-top:2px;}
+.num-sub span{color:var(--tx2);}
+.num-bar-wrap{min-width:80px;}
+.num-score{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-family:var(--fm);font-size:10px;font-weight:700;flex-shrink:0;}
+.num-score.hi{background:rgba(16,185,129,0.12);color:var(--c4);border:1.5px solid var(--c4);}
+.num-score.md{background:rgba(245,158,11,0.12);color:var(--c5);border:1.5px solid var(--c5);}
+
+/* ── SELECT ALL BAR ── */
+.sel-bar{
+  display:flex;align-items:center;justify-content:space-between;
+  background:rgba(59,130,246,0.07);border:1px solid rgba(59,130,246,0.15);
+  border-radius:8px;padding:8px 12px;margin-bottom:10px;
+}
+.sel-count{font-size:12px;font-family:var(--fm);color:var(--c1);}
+.sel-actions{display:flex;gap:8px;}
+
+/* ── DELAY BUILDER ── */
+.delay-card{
+  background:var(--bg3);border:1px solid var(--b1);border-radius:10px;
+  padding:14px 16px;
+}
+.delay-visual{
+  display:flex;align-items:center;gap:0;margin:14px 0;overflow-x:auto;padding-bottom:4px;
+}
+.dv-msg{
+  background:var(--s2);border:1px solid var(--b2);border-radius:8px;
+  padding:8px 12px;flex-shrink:0;text-align:center;min-width:80px;
+}
+.dv-msg-n{font-family:var(--fm);font-size:10px;color:var(--tx3);}
+.dv-msg-lbl{font-size:11px;font-weight:600;margin-top:2px;}
+.dv-arrow{display:flex;align-items:center;flex-shrink:0;padding:0 4px;}
+.dv-arrow-line{height:1px;width:30px;background:var(--b3);}
+.dv-delay{
+  background:rgba(245,158,11,0.08);border:1px dashed rgba(245,158,11,0.3);
+  border-radius:8px;padding:6px 10px;flex-shrink:0;text-align:center;
+  font-family:var(--fm);font-size:10px;color:var(--c5);min-width:70px;
+}
+
+/* ── THROTTLE VISUALIZER ── */
+.throttle-viz{
+  background:var(--bg3);border:1px solid var(--b1);border-radius:10px;
+  padding:14px 16px;
+}
+.tv-timeline{
+  position:relative;height:60px;margin:12px 0;overflow:hidden;
+  background:var(--bg2);border-radius:8px;border:1px solid var(--b1);
+}
+.tv-msg{
+  position:absolute;top:50%;transform:translateY(-50%);
+  width:12px;height:28px;border-radius:3px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:8px;color:#fff;font-family:var(--fm);
+}
+.tv-label{position:absolute;bottom:2px;font-size:8px;color:var(--tx3);font-family:var(--fm);}
+
+/* ── STEP WIZARD ── */
+.wizard-steps{display:flex;align-items:center;gap:0;margin-bottom:24px;}
+.ws{display:flex;align-items:center;gap:8px;flex:1;}
+.ws-circle{
+  width:28px;height:28px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;font-family:var(--fm);transition:all 0.2s;
+}
+.ws-circle.done{background:var(--c4);color:#fff;}
+.ws-circle.active{background:var(--c1);color:#fff;box-shadow:0 0 12px rgba(59,130,246,0.4);}
+.ws-circle.todo{background:var(--s2);color:var(--tx3);border:1.5px solid var(--b2);}
+.ws-label{font-size:11px;font-weight:500;white-space:nowrap;}
+.ws-label.active{color:var(--c1);}
+.ws-label.done{color:var(--c4);}
+.ws-label.todo{color:var(--tx3);}
+.ws-line{flex:1;height:1px;background:var(--b2);margin:0 6px;}
+.ws-line.done{background:var(--c4);}
+
+/* ── STEP CONTENT ── */
+.step{display:none;}
+.step.on{display:block;animation:fu 0.15s ease;}
+.step-title{font-family:var(--fm);font-size:16px;font-weight:700;margin-bottom:4px;}
+.step-sub{font-size:12.5px;color:var(--tx3);margin-bottom:20px;line-height:1.5;}
+
+/* ── RANGE INPUT ── */
+input[type=range]{
+  -webkit-appearance:none;width:100%;height:4px;
+  background:var(--b2);border-radius:2px;outline:none;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:16px;height:16px;border-radius:50%;
+  background:var(--c1);cursor:pointer;box-shadow:0 0 6px rgba(59,130,246,0.4);
+}
+.range-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--tx3);font-family:var(--fm);margin-top:5px;}
+
+/* ── CARRIER BADGE ── */
+.carrier{font-size:9px;padding:2px 6px;border-radius:4px;font-family:var(--fm);font-weight:600;}
+.carrier.tmobile{background:rgba(234,0,126,0.12);color:#ea007e;border:1px solid rgba(234,0,126,0.2);}
+.carrier.att{background:rgba(0,163,224,0.12);color:#00a3e0;border:1px solid rgba(0,163,224,0.2);}
+.carrier.verizon{background:rgba(205,0,0,0.12);color:#cd0000;border:1px solid rgba(205,0,0,0.2);}
+.carrier.ee{background:rgba(0,135,95,0.12);color:#00875f;border:1px solid rgba(0,135,95,0.2);}
+.carrier.other{background:var(--s2);color:var(--tx3);border:1px solid var(--b2);}
+
+/* ── MODAL ── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:200;display:none;align-items:center;justify-content:center;}
+.overlay.on{display:flex;}
+.modal{
+  background:var(--bg2);border:1px solid var(--b2);border-radius:16px;
+  width:860px;max-width:95vw;max-height:90vh;display:flex;flex-direction:column;
+  box-shadow:0 40px 100px rgba(0,0,0,0.7);animation:fu 0.2s ease;
+}
+.modal-head{padding:18px 22px 14px;border-bottom:1px solid var(--b1);flex-shrink:0;}
+.modal-title{font-family:var(--fm);font-weight:700;font-size:18px;letter-spacing:-0.3px;}
+.modal-sub{font-size:12px;color:var(--tx3);margin-top:3px;}
+.modal-body{flex:1;overflow-y:auto;padding:20px 22px;}
+.modal-body::-webkit-scrollbar{width:4px;}
+.modal-body::-webkit-scrollbar-thumb{background:var(--b2);}
+.modal-foot{padding:14px 22px;border-top:1px solid var(--b1);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;}
+
+/* ── SECTION DIVIDER ── */
+.sdiv{display:flex;align-items:center;gap:10px;margin:18px 0 14px;}
+.sdiv-label{font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--tx3);font-family:var(--fm);white-space:nowrap;}
+.sdiv-line{flex:1;height:1px;background:var(--b1);}
+
+/* ── INFO BOX ── */
+.info-box{
+  background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.15);
+  border-radius:8px;padding:10px 13px;font-size:12px;line-height:1.55;
+  display:flex;align-items:flex-start;gap:10px;
+}
+.info-box.warn{background:rgba(245,158,11,0.06);border-color:rgba(245,158,11,0.18);}
+.info-box.green{background:rgba(16,185,129,0.06);border-color:rgba(16,185,129,0.18);}
+.info-icon{font-size:15px;flex-shrink:0;margin-top:1px;}
+
+/* ── DELAY PRESETS ── */
+.preset-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;}
+.preset{
+  background:var(--bg3);border:1px solid var(--b1);border-radius:9px;
+  padding:10px;text-align:center;cursor:pointer;transition:all 0.15s;
+}
+.preset:hover{border-color:var(--b2);}
+.preset.sel{border-color:rgba(59,130,246,0.5);background:rgba(59,130,246,0.06);}
+.preset-val{font-family:var(--fm);font-size:15px;font-weight:700;color:var(--c1);}
+.preset-lbl{font-size:10px;color:var(--tx3);margin-top:2px;}
+.preset-desc{font-size:10px;color:var(--tx3);margin-top:4px;line-height:1.4;}
+
+/* ── NUMBER STRATEGY ── */
+.strat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;}
+.strat{
+  background:var(--bg3);border:1px solid var(--b1);border-radius:10px;
+  padding:12px 14px;cursor:pointer;transition:all 0.15s;
+}
+.strat:hover{border-color:var(--b2);}
+.strat.sel{border-color:rgba(59,130,246,0.5);background:rgba(59,130,246,0.06);}
+.strat-title{font-size:12.5px;font-weight:600;margin-bottom:3px;display:flex;align-items:center;gap:7px;}
+.strat-desc{font-size:11px;color:var(--tx3);line-height:1.5;}
+
+/* ── THROTTLE TABLE ── */
+.tt{width:100%;border-collapse:collapse;}
+.tt th{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--tx3);padding:7px 10px;border-bottom:1px solid var(--b1);text-align:left;font-family:var(--fm);}
+.tt td{padding:10px 10px;border-bottom:1px solid rgba(28,38,64,0.5);font-size:12px;vertical-align:middle;}
+.tt tr:last-child td{border-bottom:none;}
+.tt tr:hover td{background:rgba(255,255,255,0.01);}
+
+/* ── REVIEW SUMMARY ── */
+.review-row{display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid rgba(28,38,64,0.5);}
+.review-row:last-child{border-bottom:none;}
+.review-key{min-width:160px;font-size:11px;color:var(--tx3);font-family:var(--fm);padding-top:2px;}
+.review-val{flex:1;font-size:13px;}
+
+/* ── SIMULATION ── */
+.sim-box{background:var(--bg3);border:1px solid var(--b1);border-radius:10px;padding:14px 16px;margin-top:14px;}
+.sim-title{font-family:var(--fm);font-size:12px;font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.sim-timeline{display:flex;flex-direction:column;gap:4px;max-height:200px;overflow-y:auto;}
+.sim-event{display:flex;align-items:center;gap:10px;padding:5px 8px;border-radius:6px;font-size:11px;font-family:var(--fm);}
+.sim-event:nth-child(odd){background:rgba(255,255,255,0.02);}
+.sim-time{color:var(--tx3);min-width:55px;}
+.sim-num{color:var(--c3);min-width:150px;}
+.sim-to{flex:1;color:var(--tx2);}
+.sim-carrier{min-width:70px;}
+
+/* ── TABS ── */
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--b1);margin-bottom:16px;}
+.tab{padding:8px 14px;font-size:12px;cursor:pointer;color:var(--tx3);border-bottom:2px solid transparent;margin-bottom:-1px;font-weight:500;transition:all 0.15s;}
+.tab:hover{color:var(--tx2);}
+.tab.on{color:var(--c1);border-bottom-color:var(--c1);}
+
+/* ── ANIM ── */
+@keyframes sendPulse{0%{opacity:1;transform:translateX(0)}100%{opacity:0;transform:translateX(20px)}}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- SIDEBAR -->
+<aside class="side">
+  <div class="side-logo">
+    <div class="lmark">AX</div>
+    <div><div class="lname">Api<em>X</em></div><div class="lver">Gateway v3</div></div>
+  </div>
+  <nav class="side-nav">
+    <div class="sn-group">SMS</div>
+    <div class="sn-item" onclick="goView('dashboard',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Dashboard
+    </div>
+    <div class="sn-item on" onclick="goView('campaigns',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 2L11 13"/><path d="M22 2L15 22l-4-9-9-4 20-7z"/></svg>
+      Campaigns
+      <span class="sn-badge blue">4</span>
+    </div>
+    <div class="sn-item" onclick="goView('conversations',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      Conversations
+      <span class="sn-badge amber">7</span>
+    </div>
+    <div class="sn-group">Infrastructure</div>
+    <div class="sn-item" onclick="goView('numbers',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.36 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+      Number Pool
+    </div>
+    <div class="sn-item" onclick="goView('devices',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+      Devices
+      <span class="sn-badge green">6</span>
+    </div>
+    <div class="sn-group">Settings</div>
+    <div class="sn-item" onclick="goView('settings',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Settings
+    </div>
+  </nav>
+</aside>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div class="tb-title" id="topTitle">Campaigns <span>/ Management</span></div>
+    <div class="live"><div class="ld"></div>LIVE</div>
+    <button class="tbtn" onclick="openModal()">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      New Campaign
+    </button>
+    <button class="tbtn">Import CSV</button>
+    <div class="av">A</div>
+  </div>
+
+  <div class="body">
+
+    <!-- ──── CAMPAIGN LIST VIEW ──── -->
+    <div class="view on" id="view-campaigns">
+
+      <!-- Stats row -->
+      <div class="g g4" style="margin-bottom:14px;">
+        <div class="sc blue"><div class="sc-lbl">Total Campaigns</div><div class="sc-val blue">11</div><div class="sc-d">4 active · 2 scheduled</div></div>
+        <div class="sc green"><div class="sc-lbl">Messages Sent</div><div class="sc-val green">48.2K</div><div class="sc-d">↑ 22% this month</div></div>
+        <div class="sc amber"><div class="sc-lbl">Avg Delivery Rate</div><div class="sc-val amber">97.9%</div><div class="sc-d">↑ 0.4%</div></div>
+        <div class="sc violet"><div class="sc-lbl">Avg CTR</div><div class="sc-val violet">18.4%</div><div class="sc-d">↑ 2.1pp</div></div>
+      </div>
+
+      <!-- Filter tabs -->
+      <div class="tabs" style="margin-bottom:14px;">
+        <div class="tab on" onclick="filterCamps('all',this)">All <span style="color:var(--tx3);font-family:var(--fm);font-size:10px;">11</span></div>
+        <div class="tab" onclick="filterCamps('running',this)">Running <span style="color:var(--tx3);font-family:var(--fm);font-size:10px;">3</span></div>
+        <div class="tab" onclick="filterCamps('scheduled',this)">Scheduled <span style="color:var(--tx3);font-family:var(--fm);font-size:10px;">2</span></div>
+        <div class="tab" onclick="filterCamps('paused',this)">Paused <span style="color:var(--tx3);font-family:var(--fm);font-size:10px;">1</span></div>
+        <div class="tab" onclick="filterCamps('done',this)">Completed <span style="color:var(--tx3);font-family:var(--fm);font-size:10px;">5</span></div>
+      </div>
+
+      <div id="campList"></div>
+    </div>
+
+    <!-- ──── DASHBOARD PLACEHOLDER ──── -->
+    <div class="view" id="view-dashboard">
+      <div style="padding:40px;text-align:center;color:var(--tx3);font-family:var(--fm);">← Select Campaigns to manage</div>
+    </div>
+    <div class="view" id="view-conversations"><div style="padding:40px;text-align:center;color:var(--tx3);font-family:var(--fm);">Conversations view</div></div>
+    <div class="view" id="view-numbers"><div id="numberPoolView"></div></div>
+    <div class="view" id="view-devices"><div style="padding:40px;text-align:center;color:var(--tx3);font-family:var(--fm);">Devices view</div></div>
+    <div class="view" id="view-settings"><div style="padding:40px;text-align:center;color:var(--tx3);font-family:var(--fm);">Settings view</div></div>
+
+  </div>
+</div>
+</div>
+
+<!-- ════════════════════════════════════════
+     NEW CAMPAIGN WIZARD MODAL
+════════════════════════════════════════ -->
+<div class="overlay" id="modal">
+<div class="modal">
+  <div class="modal-head">
+    <div class="modal-title">New Campaign</div>
+    <div class="modal-sub">Private number pool · Anti-spam delay engine · Carrier-aware distribution</div>
+  </div>
+
+  <!-- WIZARD STEPS -->
+  <div style="padding:16px 22px 0;">
+    <div class="wizard-steps" id="wizardSteps"></div>
+  </div>
+
+  <div class="modal-body" id="modalBody">
+
+    <!-- ── STEP 1: Basics ── -->
+    <div class="step on" id="step-0">
+      <div class="step-title">Campaign Basics</div>
+      <div class="step-sub">Name your campaign and set the audience. These are private numbers — no business registration needed.</div>
+
+      <div class="g g2">
+        <div class="fg"><label class="fl">Campaign Name</label><input class="fi" id="s1name" placeholder="Spring Promo 2026" value="Spring Promo 2026"></div>
+        <div class="fg"><label class="fl">Category / Tag</label><select class="fsel"><option>Marketing</option><option>Transactional</option><option>Support</option><option>Survey</option><option>Re-engagement</option></select></div>
+      </div>
+
+      <div class="fg">
+        <label class="fl">Message</label>
+        <textarea class="fta" id="s1msg" oninput="updateCharCount(this)" placeholder="Hi {first_name}, your exclusive spring offer is ready! Check it out: {link}">Hi {first_name}, your spring offer expires soon! Grab 30% off → {link} · Reply STOP to opt out</textarea>
+        <div style="display:flex;justify-content:space-between;margin-top:5px;">
+          <div style="font-size:10px;color:var(--tx3);font-family:var(--fm);">Variables: {first_name} {last_name} {link} {custom1}</div>
+          <div id="charCount" style="font-size:10px;font-family:var(--fm);color:var(--c5);">96 chars · 1 SMS</div>
+        </div>
+      </div>
+
+      <div class="g g2">
+        <div class="fg"><label class="fl">Recipient List</label>
+          <select class="fsel">
+            <option>Campaign List A (5,000 contacts)</option>
+            <option>VIP Customers (284 contacts)</option>
+            <option>Leads Q1 (1,820 contacts)</option>
+            <option>Custom CSV Upload…</option>
+          </select>
+        </div>
+        <div class="fg"><label class="fl">Remove Opt-Outs</label>
+          <div style="display:flex;align-items:center;gap:12px;margin-top:6px;">
+            <div class="tog on" onclick="this.classList.toggle('on');this.classList.toggle('off')"></div>
+            <span style="font-size:13px;">Auto-exclude STOP list <span style="color:var(--tx3);font-size:11px;">(14 removed)</span></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="info-box">
+        <div class="info-icon">ℹ️</div>
+        <div>These messages are sent from <strong>personal SIM numbers</strong> — no A2P registration. Delivery patterns should mimic natural human sending. The delay engine below will help prevent carrier flagging.</div>
+      </div>
+    </div>
+
+    <!-- ── STEP 2: Number Selection ── -->
+    <div class="step" id="step-1">
+      <div class="step-title">Choose Sender Numbers</div>
+      <div class="step-sub">Select which numbers from your pool will send this campaign. You can use all available numbers or hand-pick specific ones. The system will automatically rotate between selected numbers according to your delay rules.</div>
+
+      <!-- Strategy picker -->
+      <div class="sdiv"><div class="sdiv-line"></div><div class="sdiv-label">Distribution Strategy</div><div class="sdiv-line"></div></div>
+      <div class="strat-grid">
+        <div class="strat sel" onclick="selectStrat(this)">
+          <div class="strat-title"><span>🔄</span> Round Robin</div>
+          <div class="strat-desc">Rotate evenly across all selected numbers. Best for equal carrier representation.</div>
+        </div>
+        <div class="strat" onclick="selectStrat(this)">
+          <div class="strat-title"><span>⏱</span> Least Recently Used</div>
+          <div class="strat-desc">Always pick the number that sent least recently. Maximises cooldown time per number.</div>
+        </div>
+        <div class="strat" onclick="selectStrat(this)">
+          <div class="strat-title"><span>📊</span> Least Used Today</div>
+          <div class="strat-desc">Balance daily send counts across numbers. Prevents any single number from appearing over-active.</div>
+        </div>
+        <div class="strat" onclick="selectStrat(this)">
+          <div class="strat-title"><span>🎲</span> Random</div>
+          <div class="strat-desc">Randomise sender selection. Most natural-looking pattern for private numbers.</div>
+        </div>
+      </div>
+
+      <!-- Select bar -->
+      <div class="sel-bar">
+        <div class="sel-count" id="selCount">0 of 8 numbers selected</div>
+        <div class="sel-actions">
+          <button class="btn g sm" onclick="selectAllNums(true)">Select All</button>
+          <button class="btn g sm" onclick="selectAllNums(false)">Deselect All</button>
+          <button class="btn g sm" onclick="selectByCarrier('T-Mobile')">T-Mobile only</button>
+          <button class="btn g sm" onclick="selectByCarrier('AT&T')">AT&T only</button>
+          <button class="btn g sm" onclick="selectHealthy()">Healthy (≥85)</button>
+        </div>
+      </div>
+
+      <!-- Number pool list -->
+      <div class="num-pool" id="numPool"></div>
+
+      <div class="info-box warn" style="margin-top:12px;">
+        <div class="info-icon">⚠️</div>
+        <div><strong>Private number tip:</strong> Select at least 3–4 numbers to allow meaningful rotation. Using only 1 number for a large campaign will likely trigger carrier spam detection.</div>
+      </div>
+    </div>
+
+    <!-- ── STEP 3: Delay & Throttle ── -->
+    <div class="step" id="step-2">
+      <div class="step-title">Delay & Throttle Settings</div>
+      <div class="step-sub">This is the most important protection for private numbers. Configure realistic sending patterns — humans don't send 1,000 messages in 10 seconds.</div>
+
+      <!-- Presets -->
+      <div class="sdiv"><div class="sdiv-line"></div><div class="sdiv-label">Quick Presets</div><div class="sdiv-line"></div></div>
+      <div class="preset-grid">
+        <div class="preset" onclick="applyPreset('slow',this)">
+          <div class="preset-val">🐢</div>
+          <div class="preset-lbl">Ultra Safe</div>
+          <div class="preset-desc">30–90s between sends · 5/hr per number · best for high-value lists</div>
+        </div>
+        <div class="preset sel" onclick="applyPreset('natural',this)">
+          <div class="preset-val">🧑</div>
+          <div class="preset-lbl">Natural</div>
+          <div class="preset-desc">8–30s delay · 15/hr per number · mimics human typing speed</div>
+        </div>
+        <div class="preset" onclick="applyPreset('moderate',this)">
+          <div class="preset-val">⚡</div>
+          <div class="preset-lbl">Moderate</div>
+          <div class="preset-desc">3–10s delay · 30/hr per number · good for larger lists</div>
+        </div>
+        <div class="preset" onclick="applyPreset('custom',this)">
+          <div class="preset-val">⚙️</div>
+          <div class="preset-lbl">Custom</div>
+          <div class="preset-desc">Set your own min/max delay and per-number limits</div>
+        </div>
+      </div>
+
+      <!-- Custom controls -->
+      <div class="delay-card" id="delayCard">
+        <div style="font-family:var(--fm);font-size:12px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+          <span style="color:var(--c1);">⏱</span> Between-Message Delay
+        </div>
+
+        <div class="g g2">
+          <div class="fg">
+            <label class="fl">Min Delay</label>
+            <div class="fi-row">
+              <input class="fi" type="number" id="dmin" value="8" min="1" oninput="updateSim()">
+              <div class="fi-unit">seconds</div>
+            </div>
+          </div>
+          <div class="fg">
+            <label class="fl">Max Delay</label>
+            <div class="fi-row">
+              <input class="fi" type="number" id="dmax" value="30" min="1" oninput="updateSim()">
+              <div class="fi-unit">seconds</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="fg">
+          <label class="fl">Randomisation Type</label>
+          <select class="fsel" id="drand" onchange="updateSim()">
+            <option value="uniform">Uniform random (flat distribution)</option>
+            <option value="gaussian" selected>Gaussian (bell curve — most realistic)</option>
+            <option value="poisson">Poisson (burst-then-wait pattern)</option>
+          </select>
+        </div>
+
+        <div style="font-family:var(--fm);font-size:12px;font-weight:600;margin:14px 0 10px;display:flex;align-items:center;gap:8px;">
+          <span style="color:var(--c5);">📊</span> Per-Number Rate Limits
+        </div>
+
+        <div class="g g3">
+          <div class="fg">
+            <label class="fl">Max per number / hour</label>
+            <input class="fi" type="number" id="dph" value="15" min="1" oninput="updateSim()">
+          </div>
+          <div class="fg">
+            <label class="fl">Max per number / day</label>
+            <input class="fi" type="number" id="dpd" value="150" min="1">
+          </div>
+          <div class="fg">
+            <label class="fl">Cooldown after limit (min)</label>
+            <input class="fi" type="number" id="dcool" value="60" min="1">
+          </div>
+        </div>
+
+        <div style="font-family:var(--fm);font-size:12px;font-weight:600;margin:14px 0 10px;display:flex;align-items:center;gap:8px;">
+          <span style="color:var(--c4);">🌙</span> Sending Window
+        </div>
+        <div class="g g2">
+          <div class="fg">
+            <label class="fl">Start Time (recipient local)</label>
+            <input class="fi" type="time" id="dtstart" value="09:00">
+          </div>
+          <div class="fg">
+            <label class="fl">End Time (recipient local)</label>
+            <input class="fi" type="time" id="dtend" value="20:00">
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:4px;">
+          <div class="tog on" onclick="this.classList.toggle('on');this.classList.toggle('off')"></div>
+          <span style="font-size:13px;">Use recipient timezone (detect from area code)</span>
+        </div>
+      </div>
+
+      <!-- Send Simulation -->
+      <div class="throttle-viz" style="margin-top:14px;">
+        <div style="font-family:var(--fm);font-size:12px;font-weight:600;margin-bottom:4px;display:flex;align-items:center;justify-content:space-between;">
+          <span>Send Pattern Preview <span style="font-weight:400;color:var(--tx3);">(first 60 seconds)</span></span>
+          <button class="btn g xs" onclick="updateSim()">↻ Regenerate</button>
+        </div>
+        <div id="simTimeline" style="position:relative;height:64px;background:var(--bg2);border:1px solid var(--b1);border-radius:8px;margin-top:10px;overflow:hidden;"></div>
+        <div id="simSummary" style="margin-top:8px;font-size:11px;color:var(--tx3);font-family:var(--fm);display:flex;gap:20px;"></div>
+      </div>
+
+      <!-- Estimated completion -->
+      <div class="info-box green" style="margin-top:12px;">
+        <div class="info-icon">📅</div>
+        <div id="estCompletion">With current settings and <strong>4 numbers selected</strong>, sending to <strong>5,000 contacts</strong> will take approximately <strong>~4.6 hours</strong>.</div>
+      </div>
+    </div>
+
+    <!-- ── STEP 4: Schedule ── -->
+    <div class="step" id="step-3">
+      <div class="step-title">Scheduling</div>
+      <div class="step-sub">Choose when this campaign fires. Timezone-aware sending ensures recipients get messages at natural hours.</div>
+
+      <div class="strat-grid">
+        <div class="strat sel" onclick="selectSchedType(this,'now')">
+          <div class="strat-title">🚀 Send Immediately</div>
+          <div class="strat-desc">Start sending as soon as you launch. Campaign begins within seconds.</div>
+        </div>
+        <div class="strat" onclick="selectSchedType(this,'scheduled')">
+          <div class="strat-title">📅 Schedule for Later</div>
+          <div class="strat-desc">Pick an exact date and time to begin sending.</div>
+        </div>
+        <div class="strat" onclick="selectSchedType(this,'window')">
+          <div class="strat-title">🌅 Daily Window</div>
+          <div class="strat-desc">Send a batch each day during set hours until list is exhausted.</div>
+        </div>
+        <div class="strat" onclick="selectSchedType(this,'drip')">
+          <div class="strat-title">💧 Drip Sequence</div>
+          <div class="strat-desc">Multi-message sequence: follow-up SMS after X days if no reply.</div>
+        </div>
+      </div>
+
+      <div id="schedDetails" style="margin-top:14px;"></div>
+
+      <div class="sdiv"><div class="sdiv-line"></div><div class="sdiv-label">Pause & Resume Controls</div><div class="sdiv-line"></div></div>
+      <div class="g g2">
+        <div style="background:var(--bg3);border:1px solid var(--b1);border-radius:10px;padding:13px 15px;">
+          <div style="font-size:13px;font-weight:600;margin-bottom:4px;">Auto-pause on high failure rate</div>
+          <div style="font-size:11px;color:var(--tx3);margin-bottom:8px;">Pause campaign if delivery drops below threshold</div>
+          <div class="fi-row"><input class="fi" type="number" value="85" style="max-width:80px;"> <div class="fi-unit">% threshold</div></div>
+        </div>
+        <div style="background:var(--bg3);border:1px solid var(--b1);border-radius:10px;padding:13px 15px;">
+          <div style="font-size:13px;font-weight:600;margin-bottom:4px;">Auto-pause if device goes offline</div>
+          <div style="font-size:11px;color:var(--tx3);margin-bottom:8px;">Prevent failed sends when a device drops</div>
+          <div class="tog on" onclick="this.classList.toggle('on');this.classList.toggle('off')"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── STEP 5: Review & Launch ── -->
+    <div class="step" id="step-4">
+      <div class="step-title">Review & Launch</div>
+      <div class="step-sub">Double-check everything before sending. Once launched, the campaign uses your delay engine and will rotate numbers automatically.</div>
+
+      <div class="panel" style="margin-bottom:14px;">
+        <div class="ph"><div class="ph-t">Campaign Summary</div></div>
+        <div class="pb">
+          <div class="review-row"><div class="review-key">Campaign name</div><div class="review-val" id="rv-name">Spring Promo 2026</div></div>
+          <div class="review-row"><div class="review-key">Recipients</div><div class="review-val">Campaign List A · <strong>5,000 contacts</strong> <span style="color:var(--tx3);font-size:11px;">(14 opt-outs removed)</span></div></div>
+          <div class="review-row"><div class="review-key">Sender numbers</div><div class="review-val" id="rv-nums"><span style="color:var(--tx3);">None selected</span></div></div>
+          <div class="review-row"><div class="review-key">Distribution</div><div class="review-val" id="rv-strat"><span class="chip blue">Round Robin</span></div></div>
+          <div class="review-row"><div class="review-key">Delay between msgs</div><div class="review-val" id="rv-delay"><span class="chip amber">8–30s · Gaussian</span></div></div>
+          <div class="review-row"><div class="review-key">Per-number limit</div><div class="review-val"><span class="chip blue">15/hr · 150/day</span></div></div>
+          <div class="review-row"><div class="review-key">Sending window</div><div class="review-val"><span class="chip green">09:00–20:00 local time</span></div></div>
+          <div class="review-row"><div class="review-key">Schedule</div><div class="review-val" id="rv-sched"><span class="chip running">Immediate</span></div></div>
+          <div class="review-row"><div class="review-key">Est. completion</div><div class="review-val" id="rv-est">~4.6 hours (4 numbers at 15/hr)</div></div>
+        </div>
+      </div>
+
+      <!-- Simulated send log -->
+      <div class="sim-box">
+        <div class="sim-title">
+          <span style="color:var(--c4);">●</span> Send Simulation Preview
+          <span style="font-size:10px;color:var(--tx3);font-weight:400;">(first 10 messages)</span>
+        </div>
+        <div class="sim-timeline" id="simLog"></div>
+      </div>
+
+      <div class="info-box warn" style="margin-top:14px;">
+        <div class="info-icon">🛡️</div>
+        <div>You are sending from <strong>private SIM numbers</strong>. The delay engine is active. Make sure your message contains an opt-out instruction (e.g. "Reply STOP to opt out") to stay compliant.</div>
+      </div>
+    </div>
+
+  </div><!-- /modal-body -->
+
+  <div class="modal-foot">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <button class="btn g" onclick="closeModal()">Cancel</button>
+      <button class="btn g" id="btnBack" onclick="goStep(-1)" style="display:none;">← Back</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div id="stepIndicator" style="font-size:11px;color:var(--tx3);font-family:var(--fm);">Step 1 of 5</div>
+      <button class="btn p" id="btnNext" onclick="goStep(1)">Continue →</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+// ─── DATA ───
+const NUMBERS = [
+  {id:1,num:'+1 (555) 111-2222',carrier:'T-Mobile',score:97,sent:124,max:150,cooldown:null,dev:'Office Android #1',sig:-68,bat:84},
+  {id:2,num:'+1 (555) 333-4444',carrier:'AT&T',score:94,sent:89,max:150,cooldown:null,dev:'Office Android #1',sig:-65,bat:84},
+  {id:3,num:'+1 (555) 555-6666',carrier:'Verizon',score:99,sent:40,max:150,cooldown:'22s',dev:'Warehouse Unit',sig:-72,bat:62},
+  {id:4,num:'+1 (555) 777-8888',carrier:'T-Mobile',score:88,sent:112,max:150,cooldown:null,dev:'Reception Desk',sig:-81,bat:12},
+  {id:5,num:'+1 (555) 999-0000',carrier:'AT&T',score:76,sent:0,max:150,cooldown:null,dev:'Break Room',sig:null,bat:null,offline:true},
+  {id:6,num:'+44 7700 900100',carrier:'EE',score:95,sent:28,max:100,cooldown:null,dev:'Warehouse Unit',sig:-70,bat:62},
+  {id:7,num:'+1 (555) 234-5678',carrier:'T-Mobile',score:91,sent:67,max:150,cooldown:'8s',dev:'Office Android #2',sig:-66,bat:78},
+  {id:8,num:'+1 (555) 876-5432',carrier:'AT&T',score:93,sent:55,max:150,cooldown:null,dev:'Office Android #2',sig:-63,bat:78},
+];
+
+const CAMPAIGNS = [
+  {id:1,name:'Spring Promo 2026',status:'running',sent:3200,delivered:3156,failed:44,ctr:'18.4%',opted:12,progress:64,total:5000,sched:'Started 2h ago',numbers:['+1 (555) 111-2222','+1 (555) 333-4444','+1 (555) 777-8888','+44 7700 900100'],delay:'8–30s',strat:'Round Robin'},
+  {id:2,name:'Q1 Customer Survey',status:'running',sent:890,delivered:882,failed:8,ctr:'71.2%',opted:3,progress:89,total:1000,sched:'Started 45m ago',numbers:['+1 (555) 555-6666','+1 (555) 234-5678'],delay:'15–45s',strat:'Least Recently Used'},
+  {id:3,name:'Product Launch — Model X',status:'scheduled',sent:0,delivered:0,failed:0,ctr:'—',opted:0,progress:0,total:12000,sched:'Mar 10, 09:00 EST',numbers:['+1 (555) 111-2222','+1 (555) 333-4444','+1 (555) 555-6666','+1 (555) 234-5678','+1 (555) 876-5432'],delay:'5–20s',strat:'Random'},
+  {id:4,name:'Re-engagement — Lapsed',status:'paused',sent:1800,delivered:1743,failed:57,ctr:'12.1%',opted:9,progress:36,total:5000,sched:'Paused — high failure rate',numbers:['+1 (555) 777-8888','+1 (555) 876-5432'],delay:'20–60s',strat:'Least Used Today'},
+  {id:5,name:'February Newsletter',status:'done',sent:3800,delivered:3762,failed:38,ctr:'15.8%',opted:18,progress:100,total:3800,sched:'Completed Feb 28',numbers:['+1 (555) 111-2222','+1 (555) 333-4444','+1 (555) 555-6666'],delay:'10–35s',strat:'Round Robin'},
+];
+
+const carrierMap = {T:'tmobile','AT':'att',V:'verizon',E:'ee'};
+function carrierClass(c){if(c==='T-Mobile')return 'tmobile';if(c==='AT&T')return 'att';if(c==='Verizon')return 'verizon';if(c==='EE')return 'ee';return 'other';}
+
+let selectedNums = new Set([1,2,3,4]);
+let currentStep = 0;
+const STEPS = ['Basics','Numbers','Delay & Throttle','Schedule','Review'];
+
+// ─── NAV ───
+function goView(id, el) {
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
+  document.getElementById('view-'+id).classList.add('on');
+  document.querySelectorAll('.sn-item').forEach(i=>i.classList.remove('on'));
+  if(el) el.classList.add('on');
+  const titles = {campaigns:'Campaigns',dashboard:'Dashboard',conversations:'Conversations',numbers:'Number Pool',devices:'Devices',settings:'Settings'};
+  document.getElementById('topTitle').innerHTML = `${titles[id]||id} <span>/ ${titles[id]||id}</span>`;
+  if(id==='numbers') renderNumberPool();
+}
+
+// ─── CAMPAIGN LIST ───
+function renderCampaigns(filter='all') {
+  const cl = document.getElementById('campList');
+  const camps = CAMPAIGNS.filter(c => filter==='all' || c.status===filter);
+  cl.innerHTML = '';
+  camps.forEach(c => {
+    const pct = Math.round(c.sent/c.total*100);
+    const numChips = c.numbers.map(n=>`<span class="chip blue" style="font-size:8px;">${n}</span>`).join('');
+    const delayBadge = `<span class="chip amber">⏱ ${c.delay}</span>`;
+    const stratBadge = `<span class="chip violet">↻ ${c.strat}</span>`;
+    const failPct = c.sent>0 ? ((c.failed/c.sent)*100).toFixed(1) : '0.0';
+    cl.innerHTML += `<div class="cc">
+      <div class="cc-head">
+        <div>
+          <div class="cc-name">${c.name}</div>
+          <div class="cc-meta">
+            <span class="chip ${c.status}">${c.status.toUpperCase()}</span>
+            ${delayBadge}${stratBadge}
+            <span style="font-size:11px;color:var(--tx3);font-family:var(--fm);">${c.sched}</span>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;flex-shrink:0;">
+          ${c.status==='running'?`<button class="btn g sm" onclick="pauseCamp(${c.id})">⏸ Pause</button>`:''}
+          ${c.status==='paused'?`<button class="btn p sm">▶ Resume</button>`:''}
+          ${c.status==='scheduled'?`<button class="btn g sm">✏️ Edit</button>`:''}
+          <button class="btn g sm" onclick="editCamp(${c.id})">Analytics</button>
+          <button class="btn g sm">Duplicate</button>
+        </div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-stats">
+          <div class="cc-stat"><div class="cc-sv" style="color:var(--c1);">${c.sent.toLocaleString()}</div><div class="cc-sl">Sent</div></div>
+          <div class="cc-stat"><div class="cc-sv" style="color:var(--c4);">${c.delivered.toLocaleString()}</div><div class="cc-sl">Delivered</div></div>
+          <div class="cc-stat"><div class="cc-sv" style="color:var(--c6);">${c.failed}</div><div class="cc-sl">Failed</div></div>
+          <div class="cc-stat"><div class="cc-sv" style="color:var(--c5);">${c.ctr}</div><div class="cc-sl">CTR</div></div>
+          <div class="cc-stat"><div class="cc-sv" style="color:var(--tx3);">${c.opted}</div><div class="cc-sl">Opt-outs</div></div>
+          <div class="cc-stat"><div class="cc-sv" style="color:failPct>5?'var(--c6)':'var(--tx2)';">${failPct}%</div><div class="cc-sl">Fail Rate</div></div>
+        </div>
+        <div class="cc-progress-row"><span>${c.sent.toLocaleString()} / ${c.total.toLocaleString()} contacts</span><span>${pct}%</span></div>
+        <div class="pbar" style="height:6px;"><div class="pf ${c.status==='running'?'blue':c.status==='paused'?'amber':c.status==='done'?'green':'violet'}" style="width:${pct}%"></div></div>
+      </div>
+      <div class="cc-footer">
+        <div style="font-size:10px;color:var(--tx3);font-family:var(--fm);margin-right:4px;">NUMBERS:</div>
+        <div class="cc-num-chips">${numChips}</div>
+        ${c.status==='running'?`<div style="margin-left:auto;font-size:11px;color:var(--c4);font-family:var(--fm);" id="live-${c.id}">● Sending...</div>`:''}
+      </div>
+    </div>`;
+  });
+}
+renderCampaigns();
+
+function filterCamps(f, el) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  el.classList.add('on');
+  renderCampaigns(f);
+}
+function pauseCamp(id){ const c=CAMPAIGNS.find(x=>x.id===id); if(c){c.status='paused';renderCampaigns();} }
+function editCamp(id){ /* open analytics */ }
+
+// ─── NUMBER POOL VIEW ───
+function renderNumberPool() {
+  const el = document.getElementById('numberPoolView');
+  el.innerHTML = `<div style="padding:20px 0 14px;"><div class="sh"><div><div class="sh-t">Number Pool</div><div style="font-size:11px;color:var(--tx3);font-family:var(--fm);">All available sender numbers</div></div></div>`;
+  NUMBERS.forEach(n => {
+    const pct = Math.round(n.sent/n.max*100);
+    el.innerHTML += `<div style="background:var(--s1);border:1px solid var(--b1);border-radius:10px;padding:12px 15px;margin-bottom:8px;display:flex;align-items:center;gap:12px;">
+      <div class="num-main">${n.num}</div>
+      <span class="carrier ${carrierClass(n.carrier)}">${n.carrier}</span>
+      <div class="num-score ${n.score>=90?'hi':'md'}">${n.score}</div>
+      <div style="flex:1;"><div class="pbar"><div class="pf ${pct>80?'red':pct>50?'amber':'green'}" style="width:${pct}%"></div></div><div style="font-size:9px;color:var(--tx3);font-family:var(--fm);margin-top:3px;">${n.sent}/${n.max} today</div></div>
+      <div style="font-size:11px;color:${n.cooldown?'var(--c5)':'var(--c4)'};font-family:var(--fm);">${n.cooldown?'⏱ '+n.cooldown:'✓ Ready'}</div>
+    </div>`;
+  });
+  el.innerHTML += '</div>';
+}
+
+// ─── WIZARD ───
+function renderWizardSteps() {
+  const el = document.getElementById('wizardSteps');
+  el.innerHTML = '';
+  STEPS.forEach((s,i) => {
+    const state = i<currentStep?'done':i===currentStep?'active':'todo';
+    el.innerHTML += `
+      ${i>0?`<div class="ws-line ${i<=currentStep?'done':''}"></div>`:''}
+      <div class="ws" style="flex:${i===STEPS.length-1?'0':'1'}">
+        <div class="ws-circle ${state}">${i<currentStep?'✓':(i+1)}</div>
+        <div class="ws-label ${state}">${s}</div>
+      </div>`;
+  });
+}
+
+function goStep(dir) {
+  if(dir===1 && currentStep===STEPS.length-1) { launchCampaign(); return; }
+  currentStep = Math.max(0, Math.min(STEPS.length-1, currentStep+dir));
+  document.querySelectorAll('.step').forEach((s,i)=>s.classList.toggle('on',i===currentStep));
+  document.getElementById('btnBack').style.display = currentStep>0?'':'none';
+  document.getElementById('btnNext').textContent = currentStep===STEPS.length-1?'🚀 Launch Campaign':'Continue →';
+  document.getElementById('stepIndicator').textContent = `Step ${currentStep+1} of ${STEPS.length}`;
+  renderWizardSteps();
+  if(currentStep===1) renderNumPool();
+  if(currentStep===2) updateSim();
+  if(currentStep===4) buildReview();
+}
+
+function openModal() {
+  currentStep=0;
+  selectedNums = new Set([1,2,3,4]);
+  document.querySelectorAll('.step').forEach((s,i)=>s.classList.toggle('on',i===0));
+  document.getElementById('btnBack').style.display='none';
+  document.getElementById('btnNext').textContent='Continue →';
+  document.getElementById('stepIndicator').textContent='Step 1 of 5';
+  renderWizardSteps();
+  document.getElementById('modal').classList.add('on');
+}
+function closeModal(){document.getElementById('modal').classList.remove('on');}
+document.getElementById('modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal();});
+
+// ─── STEP 2: Number Pool ───
+function renderNumPool() {
+  const el = document.getElementById('numPool');
+  el.innerHTML = '';
+  NUMBERS.forEach(n => {
+    const sel = selectedNums.has(n.id);
+    const pct = Math.round(n.sent/n.max*100);
+    const offline = n.offline;
+    el.innerHTML += `<div class="num-item ${sel?'sel':''} ${offline?'':''}" onclick="${offline?'':(`toggleNum(${n.id},this)`)}" style="${offline?'opacity:0.4;cursor:not-allowed;':''}">
+      <div class="num-check"></div>
+      <div class="num-icon">📱</div>
+      <div class="num-info">
+        <div class="num-main">${n.num}</div>
+        <div class="num-sub">
+          <span class="carrier ${carrierClass(n.carrier)}">${n.carrier}</span>
+          &nbsp;·&nbsp;${n.dev}&nbsp;·&nbsp;
+          ${n.bat!==null?`🔋 <span>${n.bat}%</span> &nbsp;`:''}
+          ${n.sig?`📶 <span>${n.sig}dBm</span>`:'<span style="color:var(--err);">offline</span>'}
+        </div>
+      </div>
+      <div class="num-bar-wrap">
+        <div class="pbar"><div class="pf ${pct>80?'red':pct>50?'amber':'green'}" style="width:${pct}%"></div></div>
+        <div style="font-size:9px;color:var(--tx3);font-family:var(--fm);margin-top:3px;">${n.sent}/${n.max} today</div>
+      </div>
+      <div class="num-score ${n.score>=90?'hi':'md'}">${n.score}</div>
+      ${n.cooldown?`<span class="chip amber" style="font-size:9px;">⏱ ${n.cooldown}</span>`:`<span class="chip green" style="font-size:9px;">Ready</span>`}
+    </div>`;
+  });
+  updateSelCount();
+}
+
+function toggleNum(id, el) {
+  if(selectedNums.has(id)) selectedNums.delete(id);
+  else selectedNums.add(id);
+  el.classList.toggle('sel', selectedNums.has(id));
+  el.querySelector('.num-check').style.background = selectedNums.has(id)?'var(--c1)':'';
+  updateSelCount();
+}
+
+function selectAllNums(v) {
+  NUMBERS.forEach(n=>{if(!n.offline){if(v)selectedNums.add(n.id);else selectedNums.delete(n.id);}});
+  renderNumPool();
+}
+
+function selectByCarrier(c) {
+  selectedNums.clear();
+  NUMBERS.forEach(n=>{if(n.carrier===c&&!n.offline)selectedNums.add(n.id);});
+  renderNumPool();
+}
+
+function selectHealthy() {
+  selectedNums.clear();
+  NUMBERS.forEach(n=>{if(n.score>=85&&!n.offline)selectedNums.add(n.id);});
+  renderNumPool();
+}
+
+function updateSelCount() {
+  document.getElementById('selCount').textContent = `${selectedNums.size} of ${NUMBERS.filter(n=>!n.offline).length} numbers selected`;
+  updateEstCompletion();
+}
+
+function selectStrat(el) {
+  document.querySelectorAll('.strat').forEach(s=>s.classList.remove('sel'));
+  el.classList.add('sel');
+}
+
+// ─── STEP 3: Delay ───
+function applyPreset(type, el) {
+  document.querySelectorAll('.preset').forEach(p=>p.classList.remove('sel'));
+  el.classList.add('sel');
+  const presets = {
+    slow:{min:30,max:90,ph:5,pd:50,rand:'gaussian'},
+    natural:{min:8,max:30,ph:15,pd:150,rand:'gaussian'},
+    moderate:{min:3,max:10,ph:30,pd:300,rand:'uniform'},
+    custom:{min:5,max:20,ph:20,pd:200,rand:'gaussian'},
+  };
+  const p = presets[type]||presets.natural;
+  document.getElementById('dmin').value=p.min;
+  document.getElementById('dmax').value=p.max;
+  document.getElementById('dph').value=p.ph;
+  document.getElementById('dpd').value=p.pd;
+  document.getElementById('drand').value=p.rand;
+  updateSim();
+}
+
+function updateSim() {
+  const min=parseInt(document.getElementById('dmin')?.value||8);
+  const max=parseInt(document.getElementById('dmax')?.value||30);
+  const ph=parseInt(document.getElementById('dph')?.value||15);
+  const tl=document.getElementById('simTimeline');
+  if(!tl)return;
+  tl.innerHTML='';
+  const nums=Array.from(selectedNums);
+  if(!nums.length){tl.innerHTML='<div style="color:var(--tx3);font-size:11px;font-family:var(--fm);padding:20px;text-align:center;">No numbers selected</div>';return;}
+  const colors=['#3b82f6','#10b981','#f59e0b','#8b5cf6','#ef4444','#22d3ee','#f97316','#ec4899'];
+  let t=0,msgIdx=0;
+  const sends=[];
+  while(t<60&&sends.length<20){
+    const n=nums[msgIdx%nums.length];
+    const delay=min+Math.random()*(max-min);
+    sends.push({t:Math.round(t),n,color:colors[(n-1)%colors.length]});
+    t+=delay;msgIdx++;
+  }
+  sends.forEach(s=>{
+    const x=(s.t/60)*100;
+    const div=document.createElement('div');
+    div.style.cssText=`position:absolute;left:${x}%;top:50%;transform:translateY(-50%);width:10px;height:32px;border-radius:3px;background:${s.color};opacity:0.8;cursor:pointer;transition:opacity 0.1s;`;
+    div.title=`t+${s.t}s · ${NUMBERS.find(n=>n.id===s.n)?.num||'#'+s.n}`;
+    div.onmouseenter=()=>div.style.opacity='1';div.onmouseleave=()=>div.style.opacity='0.8';
+    tl.appendChild(div);
+  });
+  // time labels
+  [0,10,20,30,40,50,60].forEach(t=>{
+    const span=document.createElement('div');
+    span.style.cssText=`position:absolute;bottom:3px;left:${(t/60)*100}%;transform:translateX(-50%);font-size:8px;color:var(--tx3);font-family:var(--fm);`;
+    span.textContent=`+${t}s`;tl.appendChild(span);
+  });
+  // legend
+  const ss=document.getElementById('simSummary');
+  if(ss){ss.innerHTML=`<span>~${sends.length} msgs in 60s</span><span>Avg gap: ${Math.round((max+min)/2)}s</span><span>${selectedNums.size} numbers rotating</span>`;}
+  updateEstCompletion();
+}
+
+function updateEstCompletion() {
+  const ph=parseInt(document.getElementById('dph')?.value||15);
+  const n=selectedNums.size||1;
+  const total=5000,totalPerHour=ph*n;
+  const hrs=(total/totalPerHour).toFixed(1);
+  const el=document.getElementById('estCompletion');
+  if(el)el.innerHTML=`With current settings and <strong>${n} numbers selected</strong>, sending to <strong>${total.toLocaleString()} contacts</strong> will take approximately <strong>~${hrs} hours</strong> at <strong>${totalPerHour} msgs/hr</strong>.`;
+}
+
+// ─── STEP 4: Schedule ───
+function selectSchedType(el, type) {
+  document.querySelectorAll('#step-3 .strat').forEach(s=>s.classList.remove('sel'));
+  el.classList.add('sel');
+  const d=document.getElementById('schedDetails');
+  if(type==='scheduled'){d.innerHTML=`<div class="delay-card"><div class="g g2"><div class="fg"><label class="fl">Start Date & Time</label><input class="fi" type="datetime-local" value="2026-03-10T09:00"></div><div class="fg"><label class="fl">Timezone</label><select class="fsel"><option>America/New_York (EST)</option><option>America/Los_Angeles (PST)</option><option>Europe/London (GMT)</option><option>UTC</option></select></div></div></div>`;}
+  else if(type==='window'){d.innerHTML=`<div class="delay-card"><div class="g g3"><div class="fg"><label class="fl">Daily Start</label><input class="fi" type="time" value="09:00"></div><div class="fg"><label class="fl">Daily End</label><input class="fi" type="time" value="19:00"></div><div class="fg"><label class="fl">Max per day</label><input class="fi" type="number" value="500"></div></div><div class="fg"><label class="fl">Days to send</label><div style="display:flex;gap:6px;margin-top:2px;">${['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map((d,i)=>`<div onclick="this.classList.toggle('sel');this.style.borderColor=this.classList.contains('sel')?'var(--c1)':'var(--b2)';this.style.color=this.classList.contains('sel')?'var(--c1)':'var(--tx3)';" style="padding:5px 9px;border-radius:7px;border:1px solid var(--b2);font-size:11px;cursor:pointer;font-family:var(--fm);color:${i<5?'var(--c1)':'var(--tx3)'};border-color:${i<5?'var(--c1)':'var(--b2)'};">${d}</div>`).join('')}</div></div></div>`;}
+  else if(type==='drip'){d.innerHTML=`<div class="delay-card"><div class="fg"><label class="fl">Message 1 (immediate)</label><textarea class="fta" rows="2" style="min-height:60px;">Hi {first_name}, check out our spring offer → {link}</textarea></div><div class="fg"><label class="fl">Message 2 — send if no reply after</label><div class="fi-row"><input class="fi" type="number" value="2" style="max-width:80px;"><div class="fi-unit">days</div></div><textarea class="fta" rows="2" style="min-height:60px;margin-top:6px;">Hey {first_name}, just following up — still interested? → {link}</textarea></div></div>`;}
+  else{d.innerHTML='';}
+}
+
+// ─── STEP 5: Review ───
+function buildReview() {
+  const selNums=NUMBERS.filter(n=>selectedNums.has(n.id));
+  const numChips=selNums.map(n=>`<span class="chip blue">${n.num}</span>`).join(' ');
+  document.getElementById('rv-nums').innerHTML=numChips||'<span style="color:var(--tx3)">None selected</span>';
+  const ph=parseInt(document.getElementById('dph')?.value||15);
+  const min=parseInt(document.getElementById('dmin')?.value||8);
+  const max=parseInt(document.getElementById('dmax')?.value||30);
+  const n=selectedNums.size||1;
+  const hrs=(5000/(ph*n)).toFixed(1);
+  document.getElementById('rv-est').textContent=`~${hrs} hours (${n} numbers × ${ph}/hr = ${ph*n} msgs/hr)`;
+  document.getElementById('rv-delay').innerHTML=`<span class="chip amber">⏱ ${min}–${max}s · Gaussian</span>`;
+  // Build simulation log
+  const log=document.getElementById('simLog');
+  log.innerHTML='';
+  let t=0;
+  const numArr=Array.from(selectedNums);
+  for(let i=0;i<10;i++){
+    const ni=numArr[i%numArr.length];
+    const num=NUMBERS.find(x=>x.id===ni)||NUMBERS[0];
+    const delay=min+Math.random()*(max-min);
+    const mins=Math.floor(t/60),secs=Math.round(t%60);
+    const fakeContact=`+1 (555) ${String(Math.floor(Math.random()*900)+100)}-${String(Math.floor(Math.random()*9000)+1000)}`;
+    log.innerHTML+=`<div class="sim-event">
+      <span class="sim-time">+${mins>0?mins+'m ':''}${secs}s</span>
+      <span class="sim-num">${num.num}</span>
+      <span class="sim-to">${fakeContact}</span>
+      <span class="sim-carrier"><span class="carrier ${carrierClass(num.carrier)}">${num.carrier}</span></span>
+    </div>`;
+    t+=delay;
+  }
+}
+
+function launchCampaign() {
+  document.getElementById('btnNext').textContent='Launching…';
+  document.getElementById('btnNext').disabled=true;
+  setTimeout(()=>{
+    closeModal();
+    CAMPAIGNS.unshift({
+      id:99,name:document.getElementById('s1name')?.value||'New Campaign',
+      status:'running',sent:0,delivered:0,failed:0,ctr:'—',opted:0,progress:0,total:5000,
+      sched:'Just started',
+      numbers:NUMBERS.filter(n=>selectedNums.has(n.id)).map(n=>n.num),
+      delay:`${document.getElementById('dmin')?.value||8}–${document.getElementById('dmax')?.value||30}s`,
+      strat:'Round Robin'
+    });
+    renderCampaigns();
+    document.getElementById('btnNext').textContent='Continue →';
+    document.getElementById('btnNext').disabled=false;
+  },1200);
+}
+
+// ─── INIT ───
+renderWizardSteps();
+updateSim();
+
+// ─── LIVE TICKER ───
+let liveTick=0;
+setInterval(()=>{
+  const runningCamps=CAMPAIGNS.filter(c=>c.status==='running');
+  runningCamps.forEach(c=>{
+    const el=document.getElementById(`live-${c.id}`);
+    if(!el)return;
+    if(liveTick%3===0)el.textContent='● Sending...';
+    else if(liveTick%3===1)el.textContent='⟳ Rotating numbers...';
+    else el.textContent='✓ Message queued';
+  });
+  liveTick++;
+},2000);
+
+function updateCharCount(ta) {
+  const l=ta.value.length;
+  const sms=Math.ceil(l/160);
+  document.getElementById('charCount').textContent=`${l} chars · ${sms} SMS`;
+  document.getElementById('charCount').style.color=l>320?'var(--c6)':l>160?'var(--c5)':'var(--tx3)';
+}
+</script>
+</body>
+</html>

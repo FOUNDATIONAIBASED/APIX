@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ApiX Gateway — Sign In</title>
+<link href="https://fonts.googleapis.com/css2?family=Azeret+Mono:wght@400;500;700&family=Epilogue:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#090d1a;--bg2:#0e1525;--bg3:#131d33;--s1:#192240;
+  --b1:rgba(255,255,255,.07);--b2:rgba(255,255,255,.12);
+  --tx1:#f0f4ff;--tx2:#8fa3c8;--tx3:#526080;
+  --c1:#3b82f6;--c5:#f59e0b;--c6:#10b981;--err:#ef4444;
+  --fm:'Azeret Mono',monospace;--fs:'Epilogue',sans-serif;
+  --r:12px;
+}
+body{font-family:var(--fs);background:var(--bg);color:var(--tx1);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+
+.bg-grid{position:fixed;inset:0;background-image:linear-gradient(var(--b1) 1px,transparent 1px),linear-gradient(90deg,var(--b1) 1px,transparent 1px);background-size:50px 50px;pointer-events:none;z-index:0;}
+.glow{position:fixed;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(59,130,246,.12) 0%,transparent 70%);top:-100px;right:-100px;pointer-events:none;z-index:0;}
+
+.card{position:relative;z-index:1;width:100%;max-width:420px;background:var(--bg2);border:1px solid var(--b2);border-radius:20px;padding:40px;box-shadow:0 30px 80px rgba(0,0,0,.6);}
+
+.logo{display:flex;align-items:center;gap:12px;margin-bottom:32px;}
+.logo-mark{width:48px;height:48px;background:linear-gradient(135deg,var(--c1),#8b5cf6);border-radius:12px;display:flex;align-items:center;justify-content:center;font-family:var(--fm);font-weight:700;font-size:16px;color:#fff;flex-shrink:0;}
+.logo-text{font-size:22px;font-weight:800;letter-spacing:-.5px;}
+.logo-text em{color:var(--c1);font-style:normal;}
+
+.form-title{font-size:24px;font-weight:700;margin-bottom:4px;}
+.form-sub{font-size:13px;color:var(--tx2);margin-bottom:28px;line-height:1.5;}
+
+.field{margin-bottom:16px;}
+label{display:block;font-size:11px;font-family:var(--fm);color:var(--tx2);margin-bottom:6px;letter-spacing:.5px;text-transform:uppercase;}
+input{width:100%;background:var(--s1);border:1px solid var(--b2);border-radius:8px;padding:11px 14px;font-size:13.5px;font-family:var(--fm);color:var(--tx1);outline:none;transition:.2s;}
+input:focus{border-color:var(--c1);box-shadow:0 0 0 3px rgba(59,130,246,.15);}
+input::placeholder{color:var(--tx3);}
+
+.btn-primary{width:100%;background:linear-gradient(135deg,var(--c1),#6366f1);border:none;border-radius:10px;padding:13px;font-size:14px;font-weight:700;font-family:var(--fs);color:#fff;cursor:pointer;transition:.2s;margin-top:8px;}
+.btn-primary:hover{opacity:.9;transform:translateY(-1px);}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+
+.error-box{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:11px 14px;font-size:12.5px;color:#fca5a5;margin-bottom:16px;display:none;}
+.success-box{background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:8px;padding:11px 14px;font-size:12.5px;color:#6ee7b7;margin-bottom:16px;display:none;}
+
+.divider{display:flex;align-items:center;gap:10px;margin:20px 0;color:var(--tx3);font-size:11px;}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--b1);}
+
+.plan-link{text-align:center;font-size:12px;color:var(--tx2);margin-top:20px;}
+.plan-link a{color:var(--c1);text-decoration:none;}
+
+/* Setup wizard steps */
+.step{display:none;animation:fadeIn .3s ease;}
+.step.active{display:block;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+.step-indicator{display:flex;gap:8px;margin-bottom:28px;}
+.step-dot{width:6px;height:6px;border-radius:3px;background:var(--b2);transition:.3s;}
+.step-dot.active{background:var(--c1);width:20px;}
+.step-dot.done{background:var(--c6);}
+
+.avatar-preview{width:56px;height:56px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;font-family:var(--fm);margin:0 auto 20px;transition:.3s;}
+
+.role-badge{display:inline-block;padding:3px 10px;border-radius:6px;font-family:var(--fm);font-size:11px;font-weight:700;background:rgba(16,185,129,.15);color:#6ee7b7;border:1px solid rgba(16,185,129,.2);}
+
+.features-list{display:flex;flex-direction:column;gap:8px;margin:16px 0;}
+.feature-item{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--tx2);}
+.feature-icon{width:22px;height:22px;border-radius:6px;background:rgba(59,130,246,.15);display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="glow"></div>
+
+<div class="card">
+  <div class="logo">
+    <div class="logo-mark">AX</div>
+    <div class="logo-text">Api<em>X</em> Gateway</div>
+  </div>
+
+  <!-- Loading (shown until init determines login vs setup) -->
+  <div id="formLoading" style="text-align:center;padding:20px 0;">
+    <div style="font-size:13px;color:var(--tx2);">Checking…</div>
+  </div>
+
+  <!-- ── LOGIN FORM ── -->
+  <div id="formLogin" style="display:none;">
+    <div class="form-title">Welcome back</div>
+    <div class="form-sub">Sign in to access your gateway dashboard</div>
+    <div class="error-box" id="loginError"></div>
+    <div class="field"><label>Username or Email</label><input type="text" id="loginUser" placeholder="admin" autocomplete="username"></div>
+    <div class="field">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <label style="margin:0;">Password</label>
+        <a href="/reset-password" style="font-size:11px;color:var(--tx3);text-decoration:none;font-family:var(--fm);">Forgot password?</a>
+      </div>
+      <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="btn-primary" id="loginBtn" onclick="doLogin()">Sign In</button>
+    <div class="plan-link" style="margin-top:16px;">
+      <a href="/plans">View Plans & Pricing →</a>
+    </div>
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--b1);text-align:center;">
+      <a href="#" onclick="trySetup();return false;" style="font-size:12px;color:var(--c1);">First time? Create admin account</a>
+    </div>
+  </div>
+
+  <!-- ── CHANGE PASSWORD (required on first login) ── -->
+  <div id="formChangePassword" style="display:none;">
+    <div class="form-title">Set a new password</div>
+    <div class="form-sub">You signed in with a one-time password. Please choose a permanent password.</div>
+    <div class="error-box" id="chPwError"></div>
+    <div class="field"><label>Current password (one-time password)</label><input type="password" id="chPwCur" placeholder="Enter the password from your email" autocomplete="current-password"></div>
+    <div class="field"><label>New password</label><input type="password" id="chPwNew" placeholder="Min 8 characters" autocomplete="new-password"></div>
+    <div class="field"><label>Confirm new password</label><input type="password" id="chPwNew2" placeholder="Repeat" autocomplete="new-password"></div>
+    <button class="btn-primary" id="chPwBtn" onclick="doChangePasswordRequired()">Set Password &amp; Continue</button>
+  </div>
+
+  <!-- ── 2FA CHALLENGE ── -->
+  <div id="form2FA" style="display:none;">
+    <div class="form-title">Two-Factor Authentication</div>
+    <div class="form-sub">Enter the 6-digit code from your authenticator app</div>
+    <div class="error-box" id="totpError"></div>
+    <div class="field">
+      <label>Authenticator Code</label>
+      <input type="text" id="totpCode" placeholder="000 000" maxlength="7" autocomplete="one-time-code" inputmode="numeric" style="text-align:center;font-size:24px;letter-spacing:8px;font-family:monospace;">
+    </div>
+    <button class="btn-primary" id="totpBtn" onclick="doVerify2FA()">Verify</button>
+    <div style="margin-top:12px;text-align:center;font-size:12px;color:var(--tx3);">Lost your device? Enter a backup code instead</div>
+  </div>
+
+  <!-- ── SETUP WIZARD ── -->
+  <div id="formSetup" style="display:none;">
+    <div class="step-indicator">
+      <div class="step-dot active" id="dot0"></div>
+      <div class="step-dot" id="dot1"></div>
+      <div class="step-dot" id="dot2"></div>
+    </div>
+
+    <!-- Step 0: Welcome -->
+    <div class="step active" id="step0">
+      <div class="form-title">First-time Setup</div>
+      <div class="form-sub">Create your admin account to get started. This is a one-time setup.</div>
+      <div class="features-list">
+        <div class="feature-item"><div class="feature-icon">🔐</div>Secure admin account with bcrypt password hashing</div>
+        <div class="feature-item"><div class="feature-icon">📊</div>Full dashboard access with unlimited plan</div>
+        <div class="feature-item"><div class="feature-icon">👥</div>Create and manage user accounts with custom plans</div>
+        <div class="feature-item"><div class="feature-icon">🔑</div>Issue API keys with plan-based feature gating</div>
+      </div>
+      <button class="btn-primary" onclick="nextStep(1)">Get Started →</button>
+    </div>
+
+    <!-- Step 1: Account details -->
+    <div class="step" id="step1">
+      <div class="form-title">Create Admin Account</div>
+      <div class="form-sub">This will be the owner account with full access.</div>
+      <div class="error-box" id="setupError"></div>
+      <div class="field"><label>Username</label><input type="text" id="setupUser" placeholder="admin" oninput="updateAvatar()" autocomplete="username"></div>
+      <div class="field"><label>Display Name <span style="color:var(--tx3)">(optional)</span></label><input type="text" id="setupDisplay" placeholder="Your Name" oninput="updateAvatar()"></div>
+      <div class="field"><label>Email <span style="color:var(--tx3)">(optional)</span></label><input type="email" id="setupEmail" placeholder="admin@company.com"></div>
+      <button class="btn-primary" onclick="nextStep(2)">Continue →</button>
+    </div>
+
+    <!-- Step 2: Password -->
+    <div class="step" id="step2">
+      <div class="avatar-preview" id="avatarPreview" style="background:#3b82f6;">A</div>
+      <div style="text-align:center;margin-bottom:20px;">
+        <div style="font-weight:700;font-size:16px;" id="previewName">Admin</div>
+        <div style="margin-top:4px;"><span class="role-badge">ADMIN</span></div>
+        <div style="font-size:11px;color:var(--tx3);margin-top:4px;font-family:var(--fm);" id="previewUser">@admin</div>
+      </div>
+      <div class="error-box" id="pwError"></div>
+      <div class="field"><label>Password</label><input type="password" id="setupPass" placeholder="Min 8 characters" autocomplete="new-password"></div>
+      <div class="field"><label>Confirm Password</label><input type="password" id="setupPass2" placeholder="Repeat password" autocomplete="new-password"></div>
+      <button class="btn-primary" id="setupBtn" onclick="doSetup()">Create Account &amp; Launch</button>
+    </div>
+  </div>
+
+  <!-- HTTP tip — shown when loaded over http:// (only useful after successful load) -->
+  <div id="httpTip" style="display:none;margin-top:24px;padding-top:16px;border-top:1px solid var(--b1);font-size:11px;color:var(--tx3);font-family:var(--fm);">
+    ✓ Using HTTP. If you see an SSL error, use <strong>http://</strong> in the address bar.
+  </div>
+</div>
+
+<script>
+let currentStep = 0;
+const COLORS = ['#3b82f6','#8b5cf6','#10b981','#f59e0b','#ef4444','#06b6d4','#ec4899'];
+
+function showForm(id) {
+  ['formLoading','formLogin','formSetup','form2FA','formChangePassword'].forEach(fid=>{
+    const el = document.getElementById(fid);
+    if (el) el.style.display = fid === id ? 'block' : 'none';
+  });
+}
+
+async function trySetup() {
+  const r = await fetch('/api/auth/setup-status').then(r=>r.json()).catch(()=>({needs_setup:true}));
+  if (r.needs_setup) { showForm('formSetup'); } else { alert('Setup already completed. Sign in below.'); }
+}
+
+async function init() {
+  showForm('formLoading');
+  // If already authenticated, check if must change password first
+  try {
+    const me = await fetch('/api/auth/me');
+    if (me.ok) {
+      const data = await me.json();
+      if (data.user?.must_change_password) {
+        showForm('formChangePassword');
+        return;
+      }
+      const redirect = new URLSearchParams(location.search).get('redirect') || '/';
+      window.location.replace(redirect);
+      return;
+    }
+  } catch(_) {}
+
+  // Check if fresh install — show setup form, else login
+  const r = await fetch('/api/auth/setup-status').then(r=>r.json()).catch(()=>({needs_setup:true}));
+  if (r.needs_setup) {
+    showForm('formSetup');
+  } else {
+    showForm('formLogin');
+  }
+}
+
+function nextStep(n) {
+  // Validate step 1
+  if (n === 2) {
+    const user = document.getElementById('setupUser').value.trim();
+    if (!user || user.length < 3) { document.getElementById('setupError').textContent='Username must be at least 3 characters'; document.getElementById('setupError').style.display='block'; return; }
+    document.getElementById('setupError').style.display='none';
+    // Update preview
+    const display = document.getElementById('setupDisplay').value.trim() || user;
+    document.getElementById('previewName').textContent = display;
+    document.getElementById('previewUser').textContent = '@' + user;
+  }
+  document.getElementById('step' + currentStep).classList.remove('active');
+  document.getElementById('dot' + currentStep).classList.remove('active');
+  document.getElementById('dot' + currentStep).classList.add('done');
+  currentStep = n;
+  document.getElementById('step' + n).classList.add('active');
+  document.getElementById('dot' + n).classList.add('active');
+}
+
+function updateAvatar() {
+  const user = document.getElementById('setupUser').value || '';
+  const display = document.getElementById('setupDisplay').value || user;
+  const el = document.getElementById('avatarPreview');
+  if (el) {
+    const letter = (display[0] || 'A').toUpperCase();
+    const color = COLORS[user.charCodeAt(0) % COLORS.length] || '#3b82f6';
+    el.textContent = letter;
+    el.style.background = color;
+  }
+}
+
+async function doSetup() {
+  const username = document.getElementById('setupUser').value.trim();
+  const display_name = document.getElementById('setupDisplay').value.trim();
+  const email = document.getElementById('setupEmail').value.trim();
+  const password = document.getElementById('setupPass').value;
+  const password2 = document.getElementById('setupPass2').value;
+  const errEl = document.getElementById('pwError');
+
+  if (password.length < 8) { errEl.textContent='Password must be at least 8 characters'; errEl.style.display='block'; return; }
+  if (password !== password2) { errEl.textContent='Passwords do not match'; errEl.style.display='block'; return; }
+  errEl.style.display='none';
+
+  const btn = document.getElementById('setupBtn');
+  btn.disabled = true; btn.textContent = 'Creating account…';
+
+  const r = await fetch('/api/auth/setup', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({username, password, email: email||null, display_name: display_name||null})
+  }).then(r=>r.json()).catch(e=>({error:e.message}));
+
+  if (r.success) {
+    btn.textContent = '✓ Done! Redirecting…';
+    sessionStorage.setItem('apix_token', r.token);
+    sessionStorage.setItem('apix_user', JSON.stringify(r.user));
+    setTimeout(() => window.location.href = '/', 800);
+  } else {
+    if (r.error && r.error.toLowerCase().includes('already completed')) {
+      showForm('formLogin');
+      btn.disabled = false; btn.textContent = 'Create Account & Launch';
+      return;
+    }
+    errEl.textContent = r.error || 'Setup failed';
+    errEl.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Create Account & Launch';
+  }
+}
+
+let _2faChallenge = null;
+
+async function doChangePasswordRequired() {
+  const cur = document.getElementById('chPwCur').value;
+  const nw  = document.getElementById('chPwNew').value;
+  const nw2 = document.getElementById('chPwNew2').value;
+  const errEl = document.getElementById('chPwError');
+  const btn = document.getElementById('chPwBtn');
+  if (!cur || !nw) { errEl.textContent = 'Fill all fields'; errEl.style.display = 'block'; return; }
+  if (nw.length < 8) { errEl.textContent = 'New password must be at least 8 characters'; errEl.style.display = 'block'; return; }
+  if (nw !== nw2) { errEl.textContent = 'Passwords do not match'; errEl.style.display = 'block'; return; }
+  errEl.style.display = 'none';
+  btn.disabled = true; btn.textContent = 'Updating…';
+  const r = await fetch('/api/auth/change-password', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ current_password: cur, new_password: nw })
+  }).then(r=>r.json()).catch(e=>({error:e.message}));
+  if (r.success) {
+    btn.textContent = '✓ Done! Redirecting…';
+    const redirect = new URLSearchParams(location.search).get('redirect') || '/';
+    setTimeout(() => window.location.href = redirect, 500);
+  } else {
+    errEl.textContent = r.error || 'Failed';
+    errEl.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Set Password & Continue';
+  }
+}
+
+async function doLogin() {
+  const username = document.getElementById('loginUser').value.trim();
+  const password = document.getElementById('loginPass').value;
+  const errEl = document.getElementById('loginError');
+  const btn = document.getElementById('loginBtn');
+
+  if (!username || !password) { errEl.textContent='Enter username and password'; errEl.style.display='block'; return; }
+  errEl.style.display = 'none';
+  btn.disabled = true; btn.textContent = 'Signing in…';
+
+  const r = await fetch('/api/auth/login', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({username, password})
+  }).then(r=>r.json()).catch(e=>({error:e.message}));
+
+  if (r.requires_2fa) {
+    _2faChallenge = r.challenge_token;
+    showForm('form2FA');
+    setTimeout(() => document.getElementById('totpCode')?.focus(), 100);
+    btn.disabled = false; btn.textContent = 'Sign In';
+    return;
+  }
+
+  if (r.success) {
+    sessionStorage.setItem('apix_token', r.token);
+    sessionStorage.setItem('apix_user', JSON.stringify(r.user));
+    if (r.user?.must_change_password) {
+      showForm('formChangePassword');
+      document.getElementById('chPwCur').placeholder = 'Enter the one-time password from your email';
+      btn.disabled = false; btn.textContent = 'Sign In';
+      return;
+    }
+    const redirect = new URLSearchParams(location.search).get('redirect') || '/';
+    window.location.href = redirect;
+  } else {
+    errEl.textContent = r.error || 'Login failed';
+    errEl.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Sign In';
+  }
+}
+
+async function doVerify2FA() {
+  const code = (document.getElementById('totpCode')?.value || '').replace(/\s/g,'');
+  const errEl = document.getElementById('totpError');
+  const btn = document.getElementById('totpBtn');
+  if (!code) { errEl.textContent='Enter code'; errEl.style.display='block'; return; }
+  errEl.style.display = 'none';
+  btn.disabled = true; btn.textContent = 'Verifying…';
+
+  const r = await fetch('/api/auth/2fa/verify', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ token: _2faChallenge, code })
+  }).then(r=>r.json()).catch(e=>({error:e.message}));
+
+  if (r.success) {
+    if (r.token) sessionStorage.setItem('apix_token', r.token);
+    if (r.user?.must_change_password) {
+      showForm('formChangePassword');
+      btn.disabled = false; btn.textContent = 'Verify';
+      return;
+    }
+    const redirect = new URLSearchParams(location.search).get('redirect') || '/';
+    window.location.href = redirect;
+  } else {
+    errEl.textContent = r.error || 'Invalid code';
+    errEl.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Verify';
+  }
+}
+
+// Submit on Enter key
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    if (document.getElementById('formChangePassword').style.display !== 'none') doChangePasswordRequired();
+    else if (document.getElementById('form2FA').style.display !== 'none') doVerify2FA();
+    else if (document.getElementById('formLogin').style.display !== 'none') doLogin();
+    else if (currentStep === 2) doSetup();
+    else if (currentStep === 1) nextStep(2);
+  }
+});
+
+init();
+if (location.protocol === 'http:') document.getElementById('httpTip').style.display = 'block';
+</script>
+</body>
+</html>

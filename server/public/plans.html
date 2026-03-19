@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ApiX Gateway — Plans & Pricing</title>
+<link href="https://fonts.googleapis.com/css2?family=Azeret+Mono:wght@400;500;700&family=Epilogue:ital,wght@0,300;0,400;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#060b16;--bg2:#0c1220;--bg3:#111929;--s1:#152038;
+  --b1:rgba(255,255,255,.06);--b2:rgba(255,255,255,.1);--b3:rgba(255,255,255,.15);
+  --tx1:#edf2ff;--tx2:#8fa3cc;--tx3:#4d6080;
+  --c1:#3b82f6;--c2:#6366f1;--c5:#f59e0b;--c6:#10b981;--err:#ef4444;
+  --fm:'Azeret Mono',monospace;--fs:'Epilogue',sans-serif;
+}
+body{font-family:var(--fs);background:var(--bg);color:var(--tx1);min-height:100vh;padding-bottom:80px;}
+
+/* ── Noise + glow bg ── */
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 80% 50% at 50% -20%,rgba(59,130,246,.08),transparent);pointer-events:none;z-index:0;}
+
+/* ── Nav ── */
+nav{position:sticky;top:0;z-index:50;background:rgba(6,11,22,.85);backdrop-filter:blur(12px);border-bottom:1px solid var(--b1);padding:0 24px;}
+.nav-inner{max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:56px;}
+.nav-logo{display:flex;align-items:center;gap:10px;font-size:18px;font-weight:800;text-decoration:none;color:var(--tx1);}
+.nav-logo-mark{width:32px;height:32px;background:linear-gradient(135deg,var(--c1),#8b5cf6);border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:var(--fm);font-size:12px;font-weight:700;color:#fff;}
+.nav-logo em{color:var(--c1);font-style:normal;}
+.nav-links{display:flex;gap:8px;align-items:center;}
+.nav-link{padding:6px 14px;border-radius:8px;font-size:13px;text-decoration:none;color:var(--tx2);transition:.2s;}
+.nav-link:hover{color:var(--tx1);background:var(--b1);}
+.nav-btn{padding:7px 16px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;color:#fff;background:var(--c1);transition:.2s;}
+.nav-btn:hover{opacity:.9;}
+
+/* ── Hero ── */
+.hero{text-align:center;padding:80px 24px 56px;position:relative;z-index:1;}
+.hero-tag{display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:20px;border:1px solid rgba(59,130,246,.3);background:rgba(59,130,246,.08);font-family:var(--fm);font-size:11px;color:var(--c1);letter-spacing:.5px;text-transform:uppercase;margin-bottom:20px;}
+h1{font-size:clamp(36px,5vw,64px);font-weight:800;line-height:1.1;letter-spacing:-2px;margin-bottom:16px;}
+h1 em{color:transparent;background:linear-gradient(90deg,var(--c1),#a78bfa);-webkit-background-clip:text;background-clip:text;font-style:normal;}
+.hero-sub{font-size:18px;color:var(--tx2);max-width:520px;margin:0 auto 32px;line-height:1.6;font-weight:300;}
+
+/* ── Billing toggle ── */
+.toggle-wrap{display:inline-flex;align-items:center;gap:12px;background:var(--bg3);border:1px solid var(--b2);border-radius:12px;padding:6px 16px;font-size:13px;}
+.toggle{position:relative;width:44px;height:24px;cursor:pointer;}
+.toggle input{opacity:0;width:0;height:0;}
+.toggle-slider{position:absolute;inset:0;background:var(--s1);border-radius:12px;transition:.3s;}
+.toggle-slider::before{content:'';position:absolute;left:3px;top:3px;width:18px;height:18px;border-radius:9px;background:var(--tx3);transition:.3s;}
+.toggle input:checked+.toggle-slider{background:var(--c1);}
+.toggle input:checked+.toggle-slider::before{transform:translateX(20px);background:#fff;}
+.toggle-label{color:var(--tx2);}
+.toggle-label.active{color:var(--tx1);font-weight:600;}
+.save-badge{padding:2px 8px;border-radius:6px;background:rgba(16,185,129,.15);color:#6ee7b7;font-size:10px;font-family:var(--fm);font-weight:700;border:1px solid rgba(16,185,129,.2);}
+
+/* ── Plans grid ── */
+.plans-section{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:0 24px;}
+.plans-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;margin-bottom:64px;}
+
+.plan-card{background:var(--bg2);border:1px solid var(--b2);border-radius:20px;padding:32px;position:relative;overflow:hidden;transition:.3s;display:flex;flex-direction:column;}
+.plan-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,transparent 60%,rgba(59,130,246,.03));pointer-events:none;}
+.plan-card:hover{border-color:var(--b3);transform:translateY(-4px);box-shadow:0 24px 60px rgba(0,0,0,.5);}
+.plan-card.highlighted{border-color:rgba(59,130,246,.5);background:linear-gradient(160deg,var(--bg2),rgba(59,130,246,.04));}
+.plan-card.highlighted::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--c1),#a78bfa);}
+
+.plan-header{margin-bottom:24px;}
+.plan-badge{display:inline-block;padding:3px 10px;border-radius:6px;font-family:var(--fm);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;}
+.badge-popular{background:rgba(59,130,246,.15);color:#93c5fd;border:1px solid rgba(59,130,246,.2);}
+.badge-unlimited{background:rgba(245,158,11,.15);color:#fcd34d;border:1px solid rgba(245,158,11,.2);}
+
+.plan-name{font-size:22px;font-weight:700;margin-bottom:4px;}
+.plan-desc{font-size:13px;color:var(--tx2);line-height:1.5;}
+
+.plan-price{margin:20px 0;}
+.price-amount{font-size:48px;font-weight:800;letter-spacing:-2px;line-height:1;}
+.price-amount sup{font-size:20px;font-weight:600;vertical-align:top;margin-top:8px;display:inline-block;}
+.price-period{font-size:13px;color:var(--tx2);margin-top:4px;}
+.price-yearly{font-size:12px;color:var(--c6);font-family:var(--fm);margin-top:2px;display:none;}
+.price-free{font-size:40px;font-weight:800;letter-spacing:-2px;color:var(--c6);}
+
+.plan-cta{width:100%;padding:13px;border-radius:12px;font-size:14px;font-weight:700;font-family:var(--fs);cursor:pointer;border:none;transition:.2s;margin:20px 0;text-decoration:none;display:block;text-align:center;}
+.btn-get{background:linear-gradient(135deg,var(--c1),var(--c2));color:#fff;}
+.btn-get:hover{opacity:.9;transform:translateY(-1px);}
+.btn-current{background:rgba(16,185,129,.1);color:#6ee7b7;border:1px solid rgba(16,185,129,.2);cursor:default;}
+.btn-free{background:var(--s1);color:var(--tx1);border:1px solid var(--b2);}
+.btn-free:hover{border-color:var(--b3);}
+.btn-contact{background:transparent;color:var(--tx2);border:1px solid var(--b2);}
+.btn-contact:hover{color:var(--tx1);border-color:var(--b3);}
+
+/* ── Feature list ── */
+.features-divider{height:1px;background:var(--b1);margin:20px 0;}
+.plan-features{flex:1;display:flex;flex-direction:column;gap:10px;}
+.feat-item{display:flex;align-items:flex-start;gap:10px;font-size:13px;}
+.feat-check{width:18px;height:18px;border-radius:5px;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;font-size:10px;}
+.feat-yes{background:rgba(16,185,129,.15);color:#6ee7b7;}
+.feat-no{background:rgba(255,255,255,.04);color:var(--tx3);}
+.feat-text{color:var(--tx2);line-height:1.4;}
+.feat-text strong{color:var(--tx1);}
+.feat-text.dimmed{color:var(--tx3);text-decoration:line-through;}
+
+/* ── Limits grid ── */
+.limits-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:16px 0;}
+.limit-item{background:var(--s1);border-radius:8px;padding:10px 12px;}
+.limit-val{font-family:var(--fm);font-size:16px;font-weight:700;color:var(--c1);}
+.limit-val.unlimited{color:var(--c6);}
+.limit-key{font-size:10px;color:var(--tx3);margin-top:2px;text-transform:uppercase;letter-spacing:.4px;}
+
+/* ── Feature comparison table ── */
+.compare-section{margin:0 auto 64px;padding:0 24px;max-width:1100px;position:relative;z-index:1;}
+.compare-title{font-size:28px;font-weight:700;text-align:center;margin-bottom:8px;letter-spacing:-.5px;}
+.compare-sub{text-align:center;color:var(--tx2);font-size:14px;margin-bottom:32px;}
+.compare-table{width:100%;border-collapse:collapse;background:var(--bg2);border-radius:16px;overflow:hidden;border:1px solid var(--b2);}
+.compare-table th{padding:16px 20px;text-align:left;font-size:12px;font-family:var(--fm);color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;background:var(--bg3);border-bottom:1px solid var(--b2);}
+.compare-table th.plan-col{text-align:center;}
+.compare-table td{padding:13px 20px;border-bottom:1px solid var(--b1);font-size:13px;color:var(--tx2);}
+.compare-table td.plan-col{text-align:center;font-family:var(--fm);font-size:12px;}
+.compare-table tr:last-child td{border-bottom:none;}
+.compare-table tr:hover td{background:rgba(255,255,255,.02);}
+.check-yes{color:#6ee7b7;font-size:16px;}
+.check-no{color:var(--tx3);font-size:16px;}
+.check-val{color:var(--c1);font-weight:600;}
+.section-row td{background:var(--bg3);font-family:var(--fm);font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;padding:8px 20px;}
+
+/* ── Admin edit panel ── */
+.admin-section{max-width:1100px;margin:0 auto 40px;padding:0 24px;position:relative;z-index:1;}
+.admin-panel{background:var(--bg2);border:1px solid var(--b2);border-radius:16px;overflow:hidden;}
+.admin-panel-head{padding:20px 24px;border-bottom:1px solid var(--b1);display:flex;align-items:center;justify-content:space-between;}
+.admin-panel-title{font-size:15px;font-weight:700;font-family:var(--fm);}
+
+input,select{background:var(--s1);border:1px solid var(--b2);border-radius:8px;padding:9px 12px;font-size:13px;font-family:var(--fm);color:var(--tx1);outline:none;width:100%;}
+input:focus,select:focus{border-color:var(--c1);}
+label{font-size:11px;font-family:var(--fm);color:var(--tx2);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px;}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+.field{margin-bottom:14px;}
+.btn-sm{padding:8px 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:var(--fs);}
+.btn-p{background:var(--c1);color:#fff;}
+.btn-g{background:var(--s1);color:var(--tx2);border:1px solid var(--b2);}
+.btn-g:hover{color:var(--tx1);}
+.btn-danger{background:rgba(239,68,68,.1);color:#fca5a5;border:1px solid rgba(239,68,68,.2);}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--bg3);border:1px solid var(--b2);border-radius:10px;padding:12px 20px;font-size:13px;z-index:1000;transform:translateY(20px);opacity:0;transition:.3s;pointer-events:none;}
+.toast.show{transform:none;opacity:1;}
+.toast.green{border-color:rgba(16,185,129,.3);color:#6ee7b7;}
+.toast.red{border-color:rgba(239,68,68,.3);color:#fca5a5;}
+
+/* ── Apply key section ── */
+.apply-key-section{max-width:520px;margin:0 auto 40px;padding:0 24px;position:relative;z-index:1;}
+.apply-key-card{background:var(--bg2);border:1px solid var(--b2);border-radius:16px;padding:28px;}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <a href="/" class="nav-logo"><div class="nav-logo-mark">AX</div>Api<em>X</em> Gateway</a>
+    <div class="nav-links">
+      <a href="/" class="nav-link">Dashboard</a>
+      <a href="/docs" class="nav-link">API Docs</a>
+      <a href="/login" class="nav-btn" id="navAuthBtn">Sign In</a>
+    </div>
+  </div>
+</nav>
+
+<div class="hero">
+  <div class="hero-tag">💳 Plans &amp; Pricing</div>
+  <h1>Simple, transparent<br><em>pricing</em></h1>
+  <p class="hero-sub">Choose the plan that fits your messaging scale. Upgrade or downgrade anytime — no contracts, no surprises.</p>
+
+  <div class="toggle-wrap">
+    <span class="toggle-label active" id="lblMonthly">Monthly</span>
+    <label class="toggle">
+      <input type="checkbox" id="billingToggle" onchange="toggleBilling()">
+      <span class="toggle-slider"></span>
+    </label>
+    <span class="toggle-label" id="lblYearly">Yearly</span>
+    <span class="save-badge">Save 17%</span>
+  </div>
+</div>
+
+<!-- ── PLANS GRID ── -->
+<div class="plans-section">
+  <div class="plans-grid" id="plansGrid">
+    <div style="text-align:center;color:var(--tx3);grid-column:1/-1;padding:40px;">Loading plans…</div>
+  </div>
+</div>
+
+<!-- ── APPLY API KEY ── -->
+<div class="apply-key-section" id="applyKeySection" style="display:none;">
+  <div class="apply-key-card">
+    <div style="font-size:17px;font-weight:700;margin-bottom:6px;">🔑 Activate Plan with API Key</div>
+    <div style="font-size:13px;color:var(--tx2);margin-bottom:16px;line-height:1.5;">Enter a plan key provided by your admin to instantly activate your plan benefits.</div>
+    <div style="display:flex;gap:8px;">
+      <input id="planKeyInput" placeholder="apix_sk_xxxxxxxxxxxxxxxx" style="flex:1;">
+      <button class="btn-sm btn-p" onclick="applyKey()">Activate</button>
+    </div>
+    <div id="applyKeyMsg" style="margin-top:10px;font-size:12px;display:none;"></div>
+  </div>
+</div>
+
+<!-- ── FEATURE COMPARISON TABLE ── -->
+<div class="compare-section">
+  <div class="compare-title">Everything compared</div>
+  <div class="compare-sub">Full feature breakdown across all plans</div>
+  <div style="overflow-x:auto;">
+    <table class="compare-table" id="compareTable">
+      <thead><tr id="compareHead"></tr></thead>
+      <tbody id="compareBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── ADMIN: MANAGE PLANS ── -->
+<div class="admin-section" id="adminSection" style="display:none;">
+  <div class="admin-panel">
+    <div class="admin-panel-head">
+      <div class="admin-panel-title">⚙ Manage Plans</div>
+      <button class="btn-sm btn-p" onclick="openCreatePlan()">+ New Plan</button>
+    </div>
+    <div id="adminPlansTable" style="padding:20px;"></div>
+  </div>
+</div>
+
+<!-- ── CREATE/EDIT PLAN MODAL ── -->
+<div id="planModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:none;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--bg2);border:1px solid var(--b2);border-radius:20px;width:100%;max-width:680px;max-height:90vh;overflow-y:auto;padding:32px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+      <div style="font-size:18px;font-weight:700;" id="planModalTitle">New Plan</div>
+      <button onclick="closePlanModal()" style="background:none;border:none;color:var(--tx3);font-size:22px;cursor:pointer;">×</button>
+    </div>
+    <input type="hidden" id="editPlanId">
+    <div class="g2">
+      <div class="field"><label>Plan Name</label><input id="pm_name" placeholder="Standard"></div>
+      <div class="field"><label>Badge (optional)</label><input id="pm_badge" placeholder="Popular"></div>
+    </div>
+    <div class="field"><label>Description</label><input id="pm_desc" placeholder="For growing businesses"></div>
+    <div class="g3">
+      <div class="field"><label>Monthly Price</label><input id="pm_monthly" type="number" value="0" min="0"></div>
+      <div class="field"><label>Yearly Price</label><input id="pm_yearly" type="number" value="0" min="0"></div>
+      <div class="field"><label>Currency</label><select id="pm_currency"><option>USD</option><option>EUR</option><option>GBP</option></select></div>
+    </div>
+    <div class="field"><label>Purchase URL (leave blank to hide button)</label><input id="pm_purchase_url" placeholder="https://yoursite.com/checkout?plan=standard"></div>
+    <div class="g2">
+      <div class="field"><label>Display Order</label><input id="pm_order" type="number" value="0"></div>
+      <div class="field" style="display:flex;align-items:end;gap:12px;padding-bottom:14px;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;text-transform:none;font-size:13px;color:var(--tx2);">
+          <input type="checkbox" id="pm_highlight" style="width:16px;height:16px;"> Highlight (featured)
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;text-transform:none;font-size:13px;color:var(--tx2);">
+          <input type="checkbox" id="pm_default" style="width:16px;height:16px;"> Default for new users
+        </label>
+      </div>
+    </div>
+
+    <div style="font-size:13px;font-weight:700;margin:16px 0 12px;color:var(--tx1);">Limits <span style="font-weight:400;color:var(--tx3);font-size:11px;">(-1 = unlimited)</span></div>
+    <div class="g3">
+      <div class="field"><label>Msgs/Day</label><input id="lm_day" type="number" value="50"></div>
+      <div class="field"><label>Msgs/Month</label><input id="lm_month" type="number" value="500"></div>
+      <div class="field"><label>Devices</label><input id="lm_devices" type="number" value="1"></div>
+      <div class="field"><label>Contacts</label><input id="lm_contacts" type="number" value="100"></div>
+      <div class="field"><label>Templates</label><input id="lm_templates" type="number" value="3"></div>
+      <div class="field"><label>Campaigns</label><input id="lm_campaigns" type="number" value="0"></div>
+      <div class="field"><label>Webhooks</label><input id="lm_webhooks" type="number" value="0"></div>
+      <div class="field"><label>Scheduled Msgs</label><input id="lm_scheduled" type="number" value="0"></div>
+      <div class="field"><label>API Keys</label><input id="lm_apikeys" type="number" value="1"></div>
+    </div>
+
+    <div style="font-size:13px;font-weight:700;margin:16px 0 12px;color:var(--tx1);">Features</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <label id="feat_bulk_send" class="feat-toggle" onclick="toggleFeat(this)"><input type="checkbox" class="feat-cb"> Bulk Send</label>
+      <label id="feat_webhooks" class="feat-toggle" onclick="toggleFeat(this)"><input type="checkbox" class="feat-cb"> Webhooks</label>
+      <label id="feat_llm_autoresponder" class="feat-toggle" onclick="toggleFeat(this)"><input type="checkbox" class="feat-cb"> LLM Auto-responder</label>
+      <label id="feat_campaigns" class="feat-toggle" onclick="toggleFeat(this)"><input type="checkbox" class="feat-cb"> Campaigns</label>
+      <label id="feat_scheduled_messages" class="feat-toggle" onclick="toggleFeat(this)"><input type="checkbox" class="feat-cb"> Scheduled Messages</label>
+      <label id="feat_analytics_advanced" class="feat-toggle" onclick="toggleFeat(this)"><input type="checkbox" class="feat-cb"> Advanced Analytics</label>
+      <label id="feat_number_groups" class="feat-toggle" onclick="toggleFeat(this)"><input type="checkbox" class="feat-cb"> Number Groups</label>
+      <label id="feat_recipient_groups" class="feat-toggle" onclick="toggleFeat(this)"><input type="checkbox" class="feat-cb"> Recipient Groups</label>
+      <label id="feat_mms" class="feat-toggle" onclick="toggleFeat(this)"><input type="checkbox" class="feat-cb"> MMS Support</label>
+      <label id="feat_contacts_import" class="feat-toggle" onclick="toggleFeat(this)"><input type="checkbox" class="feat-cb"> Contacts Import</label>
+      <label id="feat_qr_pairing" class="feat-toggle" onclick="toggleFeat(this)"><input type="checkbox" class="feat-cb"> QR Device Pairing</label>
+      <label id="feat_api_access" class="feat-toggle" onclick="toggleFeat(this)"><input type="checkbox" class="feat-cb"> API Access</label>
+    </div>
+    <style>.feat-toggle{display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:8px;background:var(--s1);cursor:pointer;font-size:13px;color:var(--tx2);transition:.2s;}.feat-toggle:hover{color:var(--tx1);}.feat-toggle input{width:16px;height:16px;accent-color:var(--c1);}</style>
+
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:24px;">
+      <button class="btn-sm btn-g" onclick="closePlanModal()">Cancel</button>
+      <button class="btn-sm btn-p" onclick="savePlan()">Save Plan</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let plans = [];
+let billingYearly = false;
+let currentUser = null;
+let isAdmin = false;
+
+async function init() {
+  // Check auth
+  try {
+    const me = await fetch('/api/auth/me',{credentials:'include'}).then(r=>r.ok?r.json():null);
+    if (me) {
+      currentUser = me.user;
+      isAdmin = me.user.role === 'admin';
+      document.getElementById('navAuthBtn').textContent = me.user.display_name || me.user.username;
+      document.getElementById('navAuthBtn').href = '/';
+      document.getElementById('applyKeySection').style.display = 'block';
+    }
+  } catch(_) {}
+
+  if (isAdmin) document.getElementById('adminSection').style.display = 'block';
+
+  await loadPlans();
+}
+
+async function loadPlans() {
+  const r = await fetch('/api/v1/plans?all=' + (isAdmin?'true':'false'),{credentials:'include'}).then(r=>r.json()).catch(()=>({plans:[]}));
+  plans = r.plans || [];
+  renderPlans();
+  renderCompare();
+  if (isAdmin) renderAdminTable();
+}
+
+function toggleBilling() {
+  billingYearly = document.getElementById('billingToggle').checked;
+  document.getElementById('lblMonthly').classList.toggle('active', !billingYearly);
+  document.getElementById('lblYearly').classList.toggle('active', billingYearly);
+  renderPlans();
+}
+
+function fmtLimit(val) {
+  if (val === -1 || val === undefined) return '<span class="unlimited">∞</span>';
+  return `<span>${Number(val).toLocaleString()}</span>`;
+}
+
+function renderPlans() {
+  const grid = document.getElementById('plansGrid');
+  if (!plans.length) { grid.innerHTML = '<div style="text-align:center;color:var(--tx3);padding:60px;grid-column:1/-1;">No plans configured.</div>'; return; }
+
+  grid.innerHTML = plans.map(p => {
+    const price = billingYearly ? p.price_yearly : p.price_monthly;
+    const period = billingYearly ? '/year' : '/mo';
+    const isFree = price === 0;
+    const isCurrent = currentUser?.plan_id === p.id;
+    const badgeClass = p.badge === 'Popular' ? 'badge-popular' : p.badge ? 'badge-unlimited' : '';
+
+    const featRows = [
+      { k:'bulk_send',          l:'Bulk Send' },
+      { k:'campaigns',          l:'Campaigns' },
+      { k:'webhooks',           l:'Webhooks' },
+      { k:'llm_autoresponder',  l:'AI Auto-Responder' },
+      { k:'scheduled_messages', l:'Scheduled Messages' },
+      { k:'analytics_advanced', l:'Advanced Analytics' },
+      { k:'mms',                l:'MMS Support' },
+      { k:'qr_pairing',         l:'QR Device Pairing' },
+      { k:'contacts_import',    l:'Bulk Contacts Import' },
+    ].map(f => {
+      const has = !!p.features?.[f.k];
+      return `<div class="feat-item"><div class="feat-check ${has?'feat-yes':'feat-no'}">${has?'✓':'✕'}</div><span class="feat-text ${has?'':'dimmed'}">${f.l}</span></div>`;
+    }).join('');
+
+    let ctaEl;
+    if (isCurrent) {
+      ctaEl = `<span class="plan-cta btn-current">✓ Current Plan</span>`;
+    } else if (isFree) {
+      ctaEl = `<button class="plan-cta btn-free" onclick="getFreePlan('${p.id}')">Get Started Free</button>`;
+    } else if (p.purchase_url) {
+      ctaEl = `<a href="${p.purchase_url}" target="_blank" class="plan-cta btn-get">Get ${p.name} →</a>`;
+    } else {
+      ctaEl = `<button class="plan-cta btn-contact" onclick="contactForPlan('${p.name}')">Contact for Access</button>`;
+    }
+
+    return `
+    <div class="plan-card ${p.highlight?'highlighted':''}">
+      <div class="plan-header">
+        ${p.badge ? `<div class="plan-badge ${badgeClass}">${p.badge}</div>` : ''}
+        <div class="plan-name">${p.name}</div>
+        <div class="plan-desc">${p.description || ''}</div>
+      </div>
+      <div class="plan-price">
+        ${isFree
+          ? `<div class="price-free">Free</div><div class="price-period">forever</div>`
+          : `<div class="price-amount"><sup>${p.currency==='EUR'?'€':p.currency==='GBP'?'£':'$'}</sup>${price}</div>
+             <div class="price-period">${period}</div>
+             ${billingYearly ? '' : `<div class="price-yearly" style="display:block;">${p.currency==='EUR'?'€':p.currency==='GBP'?'£':'$'}${p.price_yearly}/yr — save ${Math.round((1-p.price_yearly/(p.price_monthly*12))*100)}%</div>`}`
+        }
+      </div>
+      ${ctaEl}
+      <div class="limits-grid">
+        <div class="limit-item"><div class="limit-val">${p.limits?.messages_per_day===-1?'∞':(p.limits?.messages_per_day||0).toLocaleString()}</div><div class="limit-key">msgs/day</div></div>
+        <div class="limit-item"><div class="limit-val">${p.limits?.devices===-1?'∞':p.limits?.devices||1}</div><div class="limit-key">devices</div></div>
+        <div class="limit-item"><div class="limit-val">${p.limits?.contacts===-1?'∞':(p.limits?.contacts||0).toLocaleString()}</div><div class="limit-key">contacts</div></div>
+        <div class="limit-item"><div class="limit-val">${p.limits?.api_keys===-1?'∞':p.limits?.api_keys||1}</div><div class="limit-key">API keys</div></div>
+      </div>
+      <div class="features-divider"></div>
+      <div class="plan-features">${featRows}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderCompare() {
+  const head = document.getElementById('compareHead');
+  const body = document.getElementById('compareBody');
+  const colLabel = p => `<th class="plan-col" style="font-size:13px;color:var(--tx1);font-weight:700;">${p.name}${p.highlight?' <span style="font-size:9px;color:var(--c1);">★</span>':''}</th>`;
+  head.innerHTML = `<th>Feature</th>` + plans.map(colLabel).join('');
+
+  const sections = [
+    { label: 'Messaging', rows: [
+      { label: 'Messages / Day', key: 'l:messages_per_day' },
+      { label: 'Messages / Month', key: 'l:messages_per_month' },
+      { label: 'Bulk Send', key: 'f:bulk_send' },
+      { label: 'MMS Support', key: 'f:mms' },
+      { label: 'Scheduled Messages', key: 'f:scheduled_messages' },
+    ]},
+    { label: 'Infrastructure', rows: [
+      { label: 'Connected Devices', key: 'l:devices' },
+      { label: 'QR Device Pairing', key: 'f:qr_pairing' },
+      { label: 'Number Groups', key: 'f:number_groups' },
+      { label: 'API Keys', key: 'l:api_keys' },
+    ]},
+    { label: 'CRM & Contacts', rows: [
+      { label: 'Contacts', key: 'l:contacts' },
+      { label: 'Bulk Import', key: 'f:contacts_import' },
+      { label: 'Recipient Groups', key: 'f:recipient_groups' },
+      { label: 'Campaigns', key: 'f:campaigns' },
+    ]},
+    { label: 'Automation', rows: [
+      { label: 'Webhooks', key: 'f:webhooks' },
+      { label: 'Webhook count', key: 'l:webhooks' },
+      { label: 'LLM Auto-responder', key: 'f:llm_autoresponder' },
+      { label: 'Advanced Analytics', key: 'f:analytics_advanced' },
+    ]},
+    { label: 'Templates', rows: [
+      { label: 'Templates', key: 'l:templates' },
+    ]},
+  ];
+
+  body.innerHTML = sections.map(s => {
+    const srow = `<tr><td class="section-row" colspan="${plans.length+1}">${s.label}</td></tr>`;
+    const rows = s.rows.map(r => {
+      const cols = plans.map(p => {
+        const [type, k] = r.key.split(':');
+        if (type === 'f') {
+          const has = !!p.features?.[k];
+          return `<td class="plan-col">${has?'<span class="check-yes">✓</span>':'<span class="check-no">—</span>'}</td>`;
+        } else {
+          const val = p.limits?.[k];
+          if (val === -1 || val === undefined) return `<td class="plan-col"><span class="unlimited" style="color:var(--c6);font-family:var(--fm);">∞</span></td>`;
+          return `<td class="plan-col"><span class="check-val" style="font-family:var(--fm);">${Number(val).toLocaleString()}</span></td>`;
+        }
+      }).join('');
+      return `<tr><td style="color:var(--tx2);">${r.label}</td>${cols}</tr>`;
+    }).join('');
+    return srow + rows;
+  }).join('');
+}
+
+function renderAdminTable() {
+  const el = document.getElementById('adminPlansTable');
+  if (!plans.length) { el.innerHTML = '<div style="color:var(--tx3);font-size:13px;text-align:center;padding:20px;">No plans yet.</div>'; return; }
+  el.innerHTML = `<table style="width:100%;border-collapse:collapse;">
+    <thead><tr style="font-size:11px;font-family:var(--fm);color:var(--tx3);">
+      <th style="padding:10px;text-align:left;">Name</th><th style="padding:10px;text-align:left;">Price</th>
+      <th style="padding:10px;text-align:left;">Default</th><th style="padding:10px;text-align:left;">Active</th>
+      <th style="padding:10px;text-align:left;">Users</th><th style="padding:10px;text-align:right;">Actions</th>
+    </tr></thead>
+    <tbody>${plans.map(p=>`<tr style="border-top:1px solid var(--b1);">
+      <td style="padding:10px;font-weight:600;">${p.name} ${p.badge?`<span style="font-size:10px;font-family:var(--fm);color:var(--c5);">[${p.badge}]</span>`:''}</td>
+      <td style="padding:10px;font-family:var(--fm);font-size:12px;color:var(--tx2);">${p.price_monthly===0?'Free':'$'+p.price_monthly+'/mo'}</td>
+      <td style="padding:10px;">${p.is_default?'<span style="color:var(--c6);font-size:12px;">✓ Default</span>':'—'}</td>
+      <td style="padding:10px;">${p.is_active?'<span style="color:var(--c6);">Active</span>':'<span style="color:var(--tx3);">Hidden</span>'}</td>
+      <td style="padding:10px;font-family:var(--fm);font-size:12px;" id="planUserCount_${p.id}">…</td>
+      <td style="padding:10px;text-align:right;display:flex;gap:6px;justify-content:flex-end;">
+        <button class="btn-sm btn-g" onclick="editPlan('${p.id}')">Edit</button>
+        <button class="btn-sm btn-danger" onclick="deletePlan('${p.id}')">Delete</button>
+      </td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+
+  // Load user counts per plan
+  fetch('/api/v1/accounts',{credentials:'include'}).then(r=>r.json()).then(d=>{
+    const counts = {};
+    (d.accounts||[]).forEach(a=>{ counts[a.plan_id]=(counts[a.plan_id]||0)+1; });
+    plans.forEach(p=>{
+      const el = document.getElementById('planUserCount_'+p.id);
+      if (el) el.textContent = (counts[p.id]||0) + ' users';
+    });
+  }).catch(()=>{});
+}
+
+// ── Plan CRUD ──────────────────────────────────────────────────
+function openCreatePlan() {
+  document.getElementById('planModalTitle').textContent = 'New Plan';
+  document.getElementById('editPlanId').value = '';
+  document.getElementById('pm_name').value='';
+  document.getElementById('pm_badge').value='';
+  document.getElementById('pm_desc').value='';
+  document.getElementById('pm_monthly').value=0;
+  document.getElementById('pm_yearly').value=0;
+  document.getElementById('pm_purchase_url').value='';
+  document.getElementById('pm_order').value=99;
+  document.getElementById('pm_highlight').checked=false;
+  document.getElementById('pm_default').checked=false;
+  ['lm_day','lm_month','lm_devices','lm_contacts','lm_templates','lm_campaigns','lm_webhooks','lm_scheduled','lm_apikeys'].forEach(id=>{
+    document.getElementById(id).value='0';
+  });
+  document.querySelectorAll('.feat-cb').forEach(cb=>cb.checked=false);
+  document.getElementById('planModal').style.display='flex';
+}
+
+function editPlan(id) {
+  const p = plans.find(x=>x.id===id);
+  if (!p) return;
+  document.getElementById('planModalTitle').textContent = 'Edit Plan';
+  document.getElementById('editPlanId').value = p.id;
+  document.getElementById('pm_name').value = p.name||'';
+  document.getElementById('pm_badge').value = p.badge||'';
+  document.getElementById('pm_desc').value = p.description||'';
+  document.getElementById('pm_monthly').value = p.price_monthly||0;
+  document.getElementById('pm_yearly').value = p.price_yearly||0;
+  document.getElementById('pm_purchase_url').value = p.purchase_url||'';
+  document.getElementById('pm_order').value = p.display_order||0;
+  document.getElementById('pm_highlight').checked = !!p.highlight;
+  document.getElementById('pm_default').checked = !!p.is_default;
+  const lm = p.limits||{};
+  document.getElementById('lm_day').value = lm.messages_per_day??0;
+  document.getElementById('lm_month').value = lm.messages_per_month??0;
+  document.getElementById('lm_devices').value = lm.devices??1;
+  document.getElementById('lm_contacts').value = lm.contacts??0;
+  document.getElementById('lm_templates').value = lm.templates??0;
+  document.getElementById('lm_campaigns').value = lm.campaigns??0;
+  document.getElementById('lm_webhooks').value = lm.webhooks??0;
+  document.getElementById('lm_scheduled').value = lm.scheduled_messages??0;
+  document.getElementById('lm_apikeys').value = lm.api_keys??1;
+  const ft = p.features||{};
+  ['bulk_send','webhooks','llm_autoresponder','campaigns','scheduled_messages','analytics_advanced','number_groups','recipient_groups','mms','contacts_import','qr_pairing','api_access'].forEach(k=>{
+    const el = document.getElementById('feat_'+k);
+    if (el) el.querySelector('.feat-cb').checked = !!ft[k];
+  });
+  document.getElementById('planModal').style.display='flex';
+}
+
+function closePlanModal() { document.getElementById('planModal').style.display='none'; }
+
+async function savePlan() {
+  const editId = document.getElementById('editPlanId').value;
+  const featKeys = ['bulk_send','webhooks','llm_autoresponder','campaigns','scheduled_messages','analytics_advanced','number_groups','recipient_groups','mms','contacts_import','qr_pairing','api_access'];
+  const features = {};
+  featKeys.forEach(k=>{
+    const el = document.getElementById('feat_'+k);
+    if (el) features[k] = el.querySelector('.feat-cb').checked;
+  });
+  const body = {
+    name:         document.getElementById('pm_name').value.trim(),
+    badge:        document.getElementById('pm_badge').value.trim()||null,
+    description:  document.getElementById('pm_desc').value.trim(),
+    price_monthly: +document.getElementById('pm_monthly').value,
+    price_yearly:  +document.getElementById('pm_yearly').value,
+    purchase_url:  document.getElementById('pm_purchase_url').value.trim()||null,
+    display_order: +document.getElementById('pm_order').value,
+    highlight:     document.getElementById('pm_highlight').checked?1:0,
+    is_default:    document.getElementById('pm_default').checked?1:0,
+    limits: {
+      messages_per_day:   +document.getElementById('lm_day').value,
+      messages_per_month: +document.getElementById('lm_month').value,
+      devices:            +document.getElementById('lm_devices').value,
+      contacts:           +document.getElementById('lm_contacts').value,
+      templates:          +document.getElementById('lm_templates').value,
+      campaigns:          +document.getElementById('lm_campaigns').value,
+      webhooks:           +document.getElementById('lm_webhooks').value,
+      scheduled_messages: +document.getElementById('lm_scheduled').value,
+      api_keys:           +document.getElementById('lm_apikeys').value,
+    },
+    features,
+  };
+  if (!body.name) return toast('Plan name required','red');
+
+  const url  = editId ? `/api/v1/plans/${editId}` : '/api/v1/plans';
+  const meth = editId ? 'PUT' : 'POST';
+  const r = await fetch(url,{method:meth,headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(body)}).then(r=>r.json());
+  if (r.success||r.plan) { toast(editId?'Plan updated':'Plan created','green'); closePlanModal(); loadPlans(); }
+  else toast(r.error||'Failed','red');
+}
+
+async function deletePlan(id) {
+  if (!confirm('Delete this plan?')) return;
+  const r = await fetch(`/api/v1/plans/${id}`,{method:'DELETE',credentials:'include'}).then(r=>r.json());
+  if (r.success) { toast('Plan deleted'); loadPlans(); }
+  else toast(r.error||'Failed','red');
+}
+
+function getFreePlan(planId) {
+  if (!currentUser) { window.location.href='/login?redirect=/plans'; return; }
+  fetch('/api/auth/me').then(r=>r.json()).then(d => {
+    if (d.user) toast('You already have an account on '+d.plan?.name,'green');
+  });
+}
+
+function contactForPlan(name) {
+  toast(`Contact your admin to be assigned the ${name} plan.`);
+}
+
+async function applyKey() {
+  const key = document.getElementById('planKeyInput').value.trim();
+  if (!key) return;
+  const msgEl = document.getElementById('applyKeyMsg');
+  const r = await fetch('/api/v1/accounts/apply-key',{
+    method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({key})
+  }).then(r=>r.json()).catch(e=>({error:e.message}));
+  msgEl.style.display = 'block';
+  if (r.success) {
+    msgEl.style.color = '#6ee7b7';
+    msgEl.textContent = `✓ ${r.message}`;
+    setTimeout(()=>location.reload(),1500);
+  } else {
+    msgEl.style.color = '#fca5a5';
+    msgEl.textContent = r.error || 'Failed to activate key';
+  }
+}
+
+function toast(msg,type='') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (type?' '+type:'');
+  clearTimeout(el._t);
+  el._t = setTimeout(()=>el.classList.remove('show'),3000);
+}
+
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closePlanModal(); });
+document.getElementById('planModal').addEventListener('click', e=>{ if(e.target===document.getElementById('planModal')) closePlanModal(); });
+
+init();
+</script>
+</body>
+</html>

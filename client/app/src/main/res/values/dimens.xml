@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="card_radius">12dp</dimen>
+    <dimen name="card_padding">16dp</dimen>
+    <dimen name="card_margin">10dp</dimen>
+    <dimen name="screen_padding">16dp</dimen>
+    <dimen name="item_height">64dp</dimen>
+    <dimen name="status_dot_size">12dp</dimen>
+    <dimen name="stat_value_text">26sp</dimen>
+    <dimen name="label_text">9sp</dimen>
+    <dimen name="body_text">13sp</dimen>
+    <dimen name="mono_text">12sp</dimen>
+    <dimen name="chip_text">9sp</dimen>
+    <dimen name="chip_padding_h">7dp</dimen>
+    <dimen name="chip_padding_v">2dp</dimen>
+    <dimen name="signal_bar_width">4dp</dimen>
+    <dimen name="signal_bar_gap">2dp</dimen>
+    <dimen name="topbar_height">52dp</dimen>
+    <dimen name="bottom_nav_height">64dp</dimen>
+</resources>

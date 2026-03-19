@@ -1,0 +1,88 @@
+<resources>
+    <string name="app_name">ApiX Agent</string>
+
+    <!-- Discover -->
+    <string name="discover_title">ApiX Agent</string>
+    <string name="discover_subtitle">Connect to ApiX Gateway Server</string>
+    <string name="discover_scanning">Scanning network…</string>
+    <string name="discover_scan_btn">Scan for Servers</string>
+    <string name="discover_manual_btn">Enter Server Manually</string>
+    <string name="discover_no_servers">No servers found on this network</string>
+    <string name="discover_connecting">Connecting…</string>
+    <string name="discover_pending">Waiting for approval…</string>
+
+    <!-- Manual entry dialog -->
+    <string name="dialog_manual_title">Enter Server Address</string>
+    <string name="dialog_manual_host_hint">IP address or hostname</string>
+    <string name="dialog_manual_port_hint">Port (default: 3000)</string>
+    <string name="dialog_manual_token_hint">Pairing token (optional)</string>
+    <string name="dialog_manual_connect">Connect</string>
+    <string name="dialog_cancel">Cancel</string>
+
+    <!-- Main / tabs -->
+    <string name="tab_home">Home</string>
+    <string name="tab_log">Log</string>
+    <string name="tab_settings">Settings</string>
+
+    <!-- Home fragment -->
+    <string name="home_server_label">SERVER</string>
+    <string name="home_status_connected">Connected</string>
+    <string name="home_status_reconnecting">Reconnecting…</string>
+    <string name="home_status_offline">Offline</string>
+    <string name="home_pause_relay">Pause Relay</string>
+    <string name="home_resume_relay">Resume Relay</string>
+    <string name="home_sent_today">Sent</string>
+    <string name="home_received_today">Received</string>
+    <string name="home_failed_today">Failed</string>
+    <string name="home_battery">Battery</string>
+    <string name="home_sim_slot">SIM %1$d</string>
+    <string name="home_no_sim">No SIM</string>
+
+    <!-- Log fragment -->
+    <string name="log_tab_all">All</string>
+    <string name="log_tab_sent">Sent</string>
+    <string name="log_tab_received">Received</string>
+    <string name="log_tab_failed">Failed</string>
+    <string name="log_empty">No messages yet</string>
+    <string name="log_mms_badge">MMS</string>
+
+    <!-- Settings -->
+    <string name="settings_server_section">Server Connection</string>
+    <string name="settings_server_current">Connected to</string>
+    <string name="settings_disconnect">Disconnect</string>
+    <string name="settings_switch_server">Switch Server</string>
+    <string name="settings_boot_section">Startup</string>
+    <string name="settings_boot_title">Start on Boot</string>
+    <string name="settings_boot_desc">Automatically start ApiX Agent when the device restarts and reconnect to the last known server.</string>
+    <string name="settings_mms_section">MMS Support</string>
+    <string name="settings_mms_title">Enable MMS Relay</string>
+    <string name="settings_mms_desc">Allow this device to send and receive MMS messages on behalf of the gateway.</string>
+    <string name="mms_chooser_title">Send MMS</string>
+    <string name="settings_theme_section">Appearance</string>
+    <string name="settings_theme_title">Theme</string>
+    <string name="settings_advanced_section">Advanced</string>
+    <string name="settings_ws_ping">WebSocket Ping Interval (seconds)</string>
+    <string name="settings_heartbeat">Heartbeat Interval (seconds)</string>
+    <string name="settings_log_level">Log Verbosity</string>
+    <string name="settings_about">About</string>
+    <string name="settings_version">Version</string>
+
+    <!-- Notifications -->
+    <string name="notif_channel_id">apix_agent_service</string>
+    <string name="notif_channel_name">ApiX Agent Service</string>
+    <string name="notif_channel_desc">Persistent relay service status</string>
+    <string name="notif_title">ApiX Agent</string>
+    <string name="notif_text_connected">Connected · relaying SMS/MMS</string>
+    <string name="notif_text_reconnecting">Reconnecting to server…</string>
+    <string name="notif_text_offline">Offline — tap to reconnect</string>
+
+    <!-- Permissions -->
+    <string name="perm_sms_rationale">SMS permission is required to send and receive text messages on behalf of the gateway.</string>
+    <string name="perm_phone_rationale">Phone permission is required to read SIM card information and report it to the gateway.</string>
+    <string name="perm_notif_rationale">Notification permission is required to show the persistent relay service status.</string>
+
+    <!-- Errors -->
+    <string name="err_connection_failed">Could not connect to server</string>
+    <string name="err_no_network">No network connection</string>
+    <string name="err_approval_pending">Waiting for admin approval in ApiX Console</string>
+</resources>

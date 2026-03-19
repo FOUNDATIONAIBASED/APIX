@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:padding="12dp"
+    android:background="@drawable/bg_card"
+    android:layout_marginBottom="6dp">
+
+    <!-- Slot badge -->
+    <FrameLayout
+        android:id="@+id/layoutSlotBadge"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:background="@drawable/bg_chip_violet">
+        <TextView
+            android:id="@+id/tvSlot"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="1"
+            android:textColor="@color/accent_violet"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:fontFamily="monospace" />
+    </FrameLayout>
+
+    <!-- Number and carrier -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:layout_marginStart="10dp">
+
+        <TextView
+            android:id="@+id/tvSimNumber"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="+1 (555) 123-4567"
+            android:textColor="@color/accent_cyan"
+            android:textSize="13sp"
+            android:fontFamily="monospace" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="3dp">
+
+            <TextView
+                android:id="@+id/tvCarrier"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="T-Mobile"
+                android:textColor="@color/accent_blue"
+                android:textSize="10sp"
+                android:fontFamily="monospace"
+                android:background="@drawable/bg_chip_blue"
+                android:paddingHorizontal="6dp"
+                android:paddingVertical="2dp" />
+
+            <TextView
+                android:id="@+id/tvSignal"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:text="-68 dBm"
+                android:textColor="@color/text_secondary"
+                android:textSize="10sp"
+                android:fontFamily="monospace" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Signal bars (simple visual) -->
+    <LinearLayout
+        android:id="@+id/layoutSignalBars"
+        android:layout_width="20dp"
+        android:layout_height="18dp"
+        android:orientation="horizontal"
+        android:gravity="bottom">
+        <View android:id="@+id/bar1" android:layout_width="3dp" android:layout_height="4dp"
+            android:background="@color/text_hint" android:layout_marginEnd="1dp" />
+        <View android:id="@+id/bar2" android:layout_width="3dp" android:layout_height="8dp"
+            android:background="@color/text_hint" android:layout_marginEnd="1dp" />
+        <View android:id="@+id/bar3" android:layout_width="3dp" android:layout_height="12dp"
+            android:background="@color/text_hint" android:layout_marginEnd="1dp" />
+        <View android:id="@+id/bar4" android:layout_width="3dp" android:layout_height="16dp"
+            android:background="@color/text_hint" />
+    </LinearLayout>
+
+</LinearLayout>

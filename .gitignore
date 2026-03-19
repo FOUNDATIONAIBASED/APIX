@@ -1,0 +1,50 @@
+# ── Dependencies (project code only, not installed packages) ──
+node_modules/
+
+# ── Live / runtime data (never commit real instance data) ──
+server/data/
+**/data/*.db
+**/data/*.db-wal
+**/data/*.db-shm
+**/*.sqlite
+**/*.sqlite3
+**/backups/
+*.log
+logs/
+
+# ── Secrets & env (keep .env.example as template only) ──
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# ── Build & cache ──
+dist/
+build/
+.cache/
+*.tsbuildinfo
+.npm/
+.yarn/
+.pnp.*
+.next/
+out/
+
+# ── IDE & OS ──
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# ── Checksums / binary artifacts (GitHub may reject) ──
+*.sha
+*.sha1
+*.sha256
+*.sha512
+*.checksum
+
+# ── Client / Android (if present) ──
+/client/build/
+/client/.gradle/
+/client/local.properties
+/captures/

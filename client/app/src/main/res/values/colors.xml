@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ── Backgrounds (from HTML --bg / --bg2 / --bg3) ── -->
+    <color name="bg">#FF07090F</color>
+    <color name="bg2">#FF0B0E18</color>
+    <color name="bg3">#FF0F1320</color>
+
+    <!-- ── Surfaces / borders ──────────────────────────── -->
+    <color name="surface1">#FF131A2C</color>
+    <color name="surface2">#FF182036</color>
+    <color name="surface3">#FF1E2842</color>
+    <color name="border1">#FF1C2640</color>
+    <color name="border2">#FF253354</color>
+    <color name="border3">#FF2E3E66</color>
+
+    <!-- ── Accent palette ──────────────────────────────── -->
+    <color name="accent_blue">#FF3B82F6</color>
+    <color name="accent_blue_dark">#FF1D4ED8</color>
+    <color name="accent_cyan">#FF22D3EE</color>
+    <color name="accent_green">#FF10B981</color>
+    <color name="accent_amber">#FFF59E0B</color>
+    <color name="accent_red">#FFEF4444</color>
+    <color name="accent_violet">#FF8B5CF6</color>
+    <color name="accent_orange">#FFF97316</color>
+
+    <!-- ── Text ────────────────────────────────────────── -->
+    <color name="text_primary">#FFE1E8F5</color>
+    <color name="text_secondary">#FF7E95BB</color>
+    <color name="text_hint">#FF3D5070</color>
+
+    <!-- ── Semantic ─────────────────────────────────────── -->
+    <color name="color_ok">#FF10B981</color>
+    <color name="color_warn">#FFF59E0B</color>
+    <color name="color_error">#FFEF4444</color>
+
+    <!-- ── Notification channel ─────────────────────────── -->
+    <color name="notification_bg">#FF0B0E18</color>
+
+    <!-- Legacy names kept for mipmap references -->
+    <color name="purple_500">#FF6200EE</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="black">#FF000000</color>
+</resources>

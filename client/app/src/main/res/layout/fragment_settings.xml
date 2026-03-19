@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- ── Server Connection ─────────────────────────── -->
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="SERVER CONNECTION" android:textColor="@color/text_hint"
+            android:textSize="9sp" android:fontFamily="monospace" android:letterSpacing="0.15"
+            android:layout_marginBottom="6dp" />
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical" android:padding="14dp"
+            android:background="@drawable/bg_card" android:layout_marginBottom="14dp">
+
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="Connected to" android:textColor="@color/text_hint" android:textSize="10sp" />
+            <TextView android:id="@+id/tvConnectedServer" android:layout_width="wrap_content"
+                android:layout_height="wrap_content" android:text="—"
+                android:textColor="@color/accent_cyan" android:textSize="13sp"
+                android:fontFamily="monospace" android:layout_marginTop="2dp" android:layout_marginBottom="10dp" />
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal">
+                <Button android:id="@+id/btnSwitchServer" android:layout_width="0dp"
+                    android:layout_height="36dp" android:layout_weight="1"
+                    android:text="@string/settings_switch_server"
+                    android:textColor="@color/text_secondary" android:background="@drawable/bg_btn_ghost"
+                    android:textSize="11sp" android:fontFamily="monospace" android:layout_marginEnd="8dp" />
+                <Button android:id="@+id/btnDisconnect" android:layout_width="0dp"
+                    android:layout_height="36dp" android:layout_weight="1"
+                    android:text="@string/settings_disconnect"
+                    android:textColor="@color/accent_red"
+                    android:backgroundTint="#1AEF4444"
+                    android:textSize="11sp" android:fontFamily="monospace" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- ── Start on Boot ──────────────────────────────── -->
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="STARTUP" android:textColor="@color/text_hint"
+            android:textSize="9sp" android:fontFamily="monospace" android:letterSpacing="0.15"
+            android:layout_marginBottom="6dp" />
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="horizontal" android:gravity="center_vertical"
+            android:padding="14dp" android:background="@drawable/bg_card"
+            android:layout_marginBottom="14dp">
+
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                android:layout_weight="1" android:orientation="vertical">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="@string/settings_boot_title" android:textColor="@color/text_primary"
+                    android:textSize="14sp" android:textStyle="bold" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp" android:text="@string/settings_boot_desc"
+                    android:textColor="@color/text_hint" android:textSize="11sp"
+                    android:lineSpacingMultiplier="1.4" />
+            </LinearLayout>
+
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/switchBootStart"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:checked="false" />
+        </LinearLayout>
+
+        <!-- ── MMS Relay ──────────────────────────────────── -->
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="MMS SUPPORT" android:textColor="@color/text_hint"
+            android:textSize="9sp" android:fontFamily="monospace" android:letterSpacing="0.15"
+            android:layout_marginBottom="6dp" />
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="horizontal" android:gravity="center_vertical"
+            android:padding="14dp" android:background="@drawable/bg_card"
+            android:layout_marginBottom="14dp">
+
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                android:layout_weight="1" android:orientation="vertical">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="@string/settings_mms_title" android:textColor="@color/text_primary"
+                    android:textSize="14sp" android:textStyle="bold" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp" android:text="@string/settings_mms_desc"
+                    android:textColor="@color/text_hint" android:textSize="11sp"
+                    android:lineSpacingMultiplier="1.4" />
+            </LinearLayout>
+
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/switchMms"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:checked="true" />
+        </LinearLayout>
+
+        <!-- ── Advanced ───────────────────────────────────── -->
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="ADVANCED" android:textColor="@color/text_hint"
+            android:textSize="9sp" android:fontFamily="monospace" android:letterSpacing="0.15"
+            android:layout_marginBottom="6dp" />
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical" android:padding="14dp"
+            android:background="@drawable/bg_card" android:layout_marginBottom="14dp">
+
+            <!-- WS Ping interval -->
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:gravity="center_vertical"
+                android:layout_marginBottom="12dp">
+                <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:text="@string/settings_ws_ping"
+                    android:textColor="@color/text_secondary" android:textSize="12sp" />
+                <EditText android:id="@+id/etWsPing" android:layout_width="60dp"
+                    android:layout_height="36dp" android:background="@drawable/bg_input"
+                    android:text="30" android:textColor="@color/text_primary" android:textSize="12sp"
+                    android:fontFamily="monospace" android:gravity="center" android:inputType="number"
+                    android:padding="8dp" />
+            </LinearLayout>
+
+            <!-- Heartbeat interval -->
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:gravity="center_vertical">
+                <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:text="@string/settings_heartbeat"
+                    android:textColor="@color/text_secondary" android:textSize="12sp" />
+                <EditText android:id="@+id/etHeartbeat" android:layout_width="60dp"
+                    android:layout_height="36dp" android:background="@drawable/bg_input"
+                    android:text="30" android:textColor="@color/text_primary" android:textSize="12sp"
+                    android:fontFamily="monospace" android:gravity="center" android:inputType="number"
+                    android:padding="8dp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- ── About ──────────────────────────────────────── -->
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="ABOUT" android:textColor="@color/text_hint"
+            android:textSize="9sp" android:fontFamily="monospace" android:letterSpacing="0.15"
+            android:layout_marginBottom="6dp" />
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical" android:padding="14dp"
+            android:background="@drawable/bg_card" android:layout_marginBottom="14dp">
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal">
+                <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:text="@string/settings_version"
+                    android:textColor="@color/text_secondary" android:textSize="12sp" />
+                <TextView android:id="@+id/tvVersion" android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" android:text="1.0.0"
+                    android:textColor="@color/text_hint" android:textSize="12sp"
+                    android:fontFamily="monospace" />
+            </LinearLayout>
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:layout_marginTop="10dp">
+                <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:text="Device ID"
+                    android:textColor="@color/text_secondary" android:textSize="12sp" />
+                <TextView android:id="@+id/tvDeviceId" android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" android:text="—"
+                    android:textColor="@color/text_hint" android:textSize="11sp"
+                    android:fontFamily="monospace" />
+            </LinearLayout>
+        </LinearLayout>
+
+    </LinearLayout>
+</ScrollView>

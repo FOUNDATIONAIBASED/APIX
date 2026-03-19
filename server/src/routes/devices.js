@@ -1,0 +1,90 @@
+'use strict';
+const express = require('express');
+const router  = express.Router();
+const crypto  = require('crypto');
+const os      = require('os');
+const { Devices, PairingTokens } = require('../db');
+const { getConnectedDeviceIds }  = require('../ws/handler');
+const { requirePerm, requireAnyRole } = require('../auth/middleware');
+const cfg = require('../config');
+
+// Shorthand: must have devices:manage perm (admin or mod)
+const canManage = requirePerm('devices:manage');
+
+// GET /api/v1/devices  — requires at least devices:view
+router.get('/', requirePerm('devices:view'), (req, res) => {
+    const devs     = Devices.findAll();
+    const online   = new Set(getConnectedDeviceIds());
+    const enriched = devs.map(d => ({
+        ...d,
+        connected: online.has(d.id),
+        signal: d.signal ? (() => { try { return JSON.parse(d.signal); } catch { return d.signal; } })() : null,
+    }));
+    res.json({ devices: enriched, total: enriched.length });
+});
+
+// GET /api/v1/devices/pair  — admin or mod can generate QR pairing token
+router.get('/pair', canManage, (req, res) => {
+    const token = crypto.randomBytes(16).toString('hex');
+    PairingTokens.create(token, 10);
+
+    const urls = [];
+    for (const ifaces of Object.values(os.networkInterfaces())) {
+        for (const iface of ifaces) {
+            if (iface.family === 'IPv4' && !iface.internal) {
+                urls.push(`ws://${iface.address}:${cfg.port}/ws`);
+            }
+        }
+    }
+    if (!urls.length) urls.push(`ws://127.0.0.1:${cfg.port}/ws`);
+
+    const payload = { v: 2, urls, token, name: cfg.mdnsName || 'ApiX Gateway', port: cfg.port };
+    res.json({ payload, qr_data: JSON.stringify(payload), expires_in: 600 });
+});
+
+// POST /api/v1/devices/verify-token  — public (Android uses this)
+router.post('/verify-token', (req, res) => {
+    const { token } = req.body;
+    if (!token) return res.status(400).json({ error: 'token required' });
+    res.json({ valid: PairingTokens.isValid(token) });
+});
+
+// GET /api/v1/devices/:id  — requires devices:view
+router.get('/:id', requirePerm('devices:view'), (req, res) => {
+    const dev = Devices.findById(req.params.id);
+    if (!dev) return res.status(404).json({ error: 'Device not found' });
+    res.json(dev);
+});
+
+// POST /api/v1/devices/:id/approve  — requires devices:manage (admin or mod)
+router.post('/:id/approve', canManage, (req, res) => {
+    const dev = Devices.findById(req.params.id);
+    if (!dev) return res.status(404).json({ error: 'Device not found' });
+    Devices.updateStatus(req.params.id, 'approved');
+    const { sendToDevice } = require('../ws/handler');
+    sendToDevice(req.params.id, { type: 'approved' });
+    res.json({ success: true, deviceId: req.params.id, status: 'approved' });
+});
+
+// POST /api/v1/devices/:id/suspend  — requires devices:manage
+router.post('/:id/suspend', canManage, (req, res) => {
+    Devices.updateStatus(req.params.id, 'suspended');
+    res.json({ success: true, deviceId: req.params.id, status: 'suspended' });
+});
+
+// DELETE /api/v1/devices/:id  — requires devices:manage
+router.delete('/:id', canManage, (req, res) => {
+    Devices.delete(req.params.id);
+    res.json({ success: true });
+});
+
+// PATCH /api/v1/devices/:id  — requires devices:manage
+router.patch('/:id', canManage, (req, res) => {
+    const { status, name } = req.body;
+    const db = require('../db').getDb();
+    if (status) db.prepare('UPDATE devices SET status=? WHERE id=?').run(status, req.params.id);
+    if (name)   db.prepare('UPDATE devices SET name=? WHERE id=?').run(name, req.params.id);
+    res.json({ success: true });
+});
+
+module.exports = router;

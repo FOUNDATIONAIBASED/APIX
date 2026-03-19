@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="20dp"
+    android:background="@color/bg2">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/dialog_manual_title"
+        android:textColor="@color/text_primary"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:fontFamily="monospace"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Host -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="HOST / IP ADDRESS"
+        android:textColor="@color/text_hint"
+        android:textSize="9sp"
+        android:fontFamily="monospace"
+        android:letterSpacing="0.15"
+        android:layout_marginBottom="4dp" />
+    <EditText
+        android:id="@+id/etHost"
+        android:layout_width="match_parent"
+        android:layout_height="44dp"
+        android:background="@drawable/bg_input"
+        android:hint="@string/dialog_manual_host_hint"
+        android:textColorHint="@color/text_hint"
+        android:textColor="@color/text_primary"
+        android:inputType="textUri"
+        android:textSize="13sp"
+        android:fontFamily="monospace"
+        android:padding="10dp"
+        android:layout_marginBottom="12dp" />
+
+    <!-- Port -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="PORT"
+        android:textColor="@color/text_hint"
+        android:textSize="9sp"
+        android:fontFamily="monospace"
+        android:letterSpacing="0.15"
+        android:layout_marginBottom="4dp" />
+    <EditText
+        android:id="@+id/etPort"
+        android:layout_width="match_parent"
+        android:layout_height="44dp"
+        android:background="@drawable/bg_input"
+        android:hint="@string/dialog_manual_port_hint"
+        android:textColorHint="@color/text_hint"
+        android:textColor="@color/text_primary"
+        android:inputType="number"
+        android:textSize="13sp"
+        android:fontFamily="monospace"
+        android:padding="10dp"
+        android:layout_marginBottom="12dp" />
+
+    <!-- Token -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="PAIRING TOKEN (OPTIONAL)"
+        android:textColor="@color/text_hint"
+        android:textSize="9sp"
+        android:fontFamily="monospace"
+        android:letterSpacing="0.15"
+        android:layout_marginBottom="4dp" />
+    <EditText
+        android:id="@+id/etToken"
+        android:layout_width="match_parent"
+        android:layout_height="44dp"
+        android:background="@drawable/bg_input"
+        android:hint="@string/dialog_manual_token_hint"
+        android:textColorHint="@color/text_hint"
+        android:textColor="@color/accent_cyan"
+        android:inputType="textPassword"
+        android:textSize="13sp"
+        android:fontFamily="monospace"
+        android:padding="10dp" />
+
+</LinearLayout>

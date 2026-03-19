@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ApiX Gateway — API Reference</title>
+<link href="https://fonts.googleapis.com/css2?family=Azeret+Mono:wght@300;400;500;700&family=Epilogue:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#07090f;--bg2:#0b0e18;--bg3:#0f1320;
+  --s1:#131a2c;--s2:#182036;--b1:#1c2640;--b2:#253354;--b3:#2e3e66;
+  --c1:#3b82f6;--c2:#1d4ed8;--c3:#22d3ee;--c4:#10b981;--c5:#f59e0b;--c6:#ef4444;--c7:#8b5cf6;
+  --tx:#e1e8f5;--tx2:#7e95bb;--tx3:#3d5070;
+  --fm:'Azeret Mono',monospace;--fb:'Epilogue',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;font-family:var(--fb);background:var(--bg);color:var(--tx);overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;
+  background:radial-gradient(ellipse 60% 40% at 10% 10%,rgba(59,130,246,.05) 0%,transparent 70%),
+             radial-gradient(ellipse 50% 30% at 90% 80%,rgba(139,92,246,.04) 0%,transparent 70%)}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--b2);border-radius:2px}
+
+.shell{display:flex;height:100vh;overflow:hidden}
+
+/* Sidebar */
+.side{width:260px;flex-shrink:0;background:var(--bg2);border-right:1px solid var(--b1);
+  display:flex;flex-direction:column;overflow:hidden}
+.side-logo{padding:16px 18px;border-bottom:1px solid var(--b1);display:flex;align-items:center;gap:10px}
+.lmark{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--c1),var(--c7));
+  display:flex;align-items:center;justify-content:center;font-family:var(--fm);font-weight:700;font-size:13px;color:#fff}
+.lname{font-family:var(--fm);font-weight:700;font-size:15px;letter-spacing:-.5px}
+.lname em{color:var(--c3);font-style:normal}
+.lver{font-size:9px;color:var(--tx3);letter-spacing:2px;font-family:var(--fm);margin-top:1px}
+.side-nav{flex:1;overflow-y:auto;padding:10px 8px}
+.sn-group{font-size:9px;letter-spacing:2px;color:var(--tx3);padding:12px 10px 5px;font-family:var(--fm)}
+.sn-item{display:block;padding:7px 10px;border-radius:7px;margin:1px 0;cursor:pointer;font-size:12px;
+  color:var(--tx2);text-decoration:none;transition:all .12s;border-left:2px solid transparent}
+.sn-item:hover{background:var(--s1);color:var(--tx)}
+.sn-item.active{background:rgba(59,130,246,.1);color:var(--c1);border-left-color:var(--c1)}
+.method-badge{font-size:9px;padding:1px 6px;border-radius:4px;font-family:var(--fm);font-weight:700;margin-left:auto}
+.get{background:rgba(16,185,129,.12);color:var(--c4)}
+.post{background:rgba(59,130,246,.12);color:var(--c1)}
+.put{background:rgba(245,158,11,.12);color:var(--c5)}
+.delete{background:rgba(239,68,68,.12);color:var(--c6)}
+.patch{background:rgba(139,92,246,.12);color:var(--c7)}
+.sn-item{display:flex;align-items:center;gap:6px}
+
+/* Main */
+.main{flex:1;overflow-y:auto;padding:32px 40px 80px}
+.main::-webkit-scrollbar{width:4px}
+
+h1{font-family:var(--fm);font-size:28px;font-weight:700;letter-spacing:-.5px;margin-bottom:6px}
+h1 em{color:var(--c3);font-style:normal}
+.subtitle{font-size:14px;color:var(--tx3);margin-bottom:32px;line-height:1.6}
+.subtitle a{color:var(--c1);text-decoration:none}
+
+.section{margin-bottom:60px}
+.section-title{font-family:var(--fm);font-size:20px;font-weight:700;margin-bottom:6px;
+  display:flex;align-items:center;gap:10px;padding-bottom:12px;border-bottom:1px solid var(--b1)}
+.section-sub{font-size:13px;color:var(--tx3);margin-bottom:24px;line-height:1.6}
+
+/* Endpoint blocks */
+.endpoint{background:var(--bg2);border:1px solid var(--b1);border-radius:12px;margin-bottom:16px;overflow:hidden}
+.ep-head{display:flex;align-items:center;gap:12px;padding:14px 18px;cursor:pointer;user-select:none}
+.ep-head:hover{background:rgba(255,255,255,.01)}
+.ep-method{font-family:var(--fm);font-size:11px;font-weight:700;padding:3px 10px;border-radius:6px;flex-shrink:0}
+.ep-path{font-family:var(--fm);font-size:13px;color:var(--c3);flex:1}
+.ep-desc{font-size:12px;color:var(--tx3)}
+.ep-body{padding:0 18px 18px;border-top:1px solid var(--b1);display:none}
+.ep-body.open{display:block}
+.ep-section{font-size:10px;text-transform:uppercase;letter-spacing:2px;color:var(--tx3);
+  font-family:var(--fm);margin:16px 0 8px}
+
+/* Code blocks */
+pre{background:var(--bg3);border:1px solid var(--b1);border-radius:8px;padding:14px 16px;
+  font-family:var(--fm);font-size:12px;overflow-x:auto;line-height:1.6;margin:0}
+code{font-family:var(--fm);font-size:12px;color:var(--c3);background:rgba(34,211,238,.06);
+  padding:1px 5px;border-radius:4px}
+
+/* Params table */
+.pt{width:100%;border-collapse:collapse;font-size:12px}
+.pt th{text-align:left;padding:7px 10px;border-bottom:1px solid var(--b1);font-size:9px;
+  text-transform:uppercase;letter-spacing:1.5px;color:var(--tx3);font-family:var(--fm)}
+.pt td{padding:9px 10px;border-bottom:1px solid rgba(28,38,64,.4);vertical-align:top}
+.pt tr:last-child td{border-bottom:none}
+.req{color:var(--c6);font-family:var(--fm);font-size:9px;font-weight:700}
+.opt{color:var(--tx3);font-family:var(--fm);font-size:9px}
+.type-badge{font-family:var(--fm);font-size:10px;color:var(--tx3)}
+.param-desc{color:var(--tx2)}
+
+/* Info box */
+.info{background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.15);
+  border-radius:8px;padding:12px 16px;font-size:13px;line-height:1.6;margin-bottom:20px;display:flex;gap:10px}
+.info.warn{background:rgba(245,158,11,.06);border-color:rgba(245,158,11,.18)}
+.info.green{background:rgba(16,185,129,.06);border-color:rgba(16,185,129,.18)}
+.info-icon{flex-shrink:0;font-size:16px;margin-top:1px}
+
+/* Chip */
+.chip{font-size:9px;padding:2px 7px;border-radius:5px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.5px;font-family:var(--fm);display:inline-block}
+.chip.blue{background:rgba(59,130,246,.1);color:var(--c1);border:1px solid rgba(59,130,246,.2)}
+.chip.green{background:rgba(16,185,129,.1);color:var(--c4);border:1px solid rgba(16,185,129,.2)}
+.chip.amber{background:rgba(245,158,11,.1);color:var(--c5);border:1px solid rgba(245,158,11,.2)}
+.chip.red{background:rgba(239,68,68,.1);color:var(--c6);border:1px solid rgba(239,68,68,.2)}
+
+/* Back link */
+.back{display:inline-flex;align-items:center;gap:6px;color:var(--c1);text-decoration:none;
+  font-size:12px;font-family:var(--fm);margin-bottom:24px}
+</style>
+</head>
+<body>
+<div class="shell">
+<aside class="side">
+  <div class="side-logo">
+    <div class="lmark">AX</div>
+    <div><div class="lname">Api<em>X</em> Docs</div><div class="lver">API Reference v2</div></div>
+  </div>
+  <nav class="side-nav" id="sideNav">
+    <div class="sn-group">Core</div>
+    <a href="#auth"      class="sn-item" onclick="scrollTo('auth')">Authentication</a>
+    <a href="#status"    class="sn-item" onclick="scrollTo('status')">Status &amp; Health</a>
+
+    <div class="sn-group">Messaging</div>
+    <a href="#send"      class="sn-item" onclick="scrollTo('send')"><span class="method-badge post">POST</span> Send SMS/MMS</a>
+    <a href="#bulk"      class="sn-item" onclick="scrollTo('bulk')"><span class="method-badge post">POST</span> Bulk Send</a>
+    <a href="#list-msgs" class="sn-item" onclick="scrollTo('list-msgs')"><span class="method-badge get">GET</span>  List Messages</a>
+    <a href="#scheduled" class="sn-item" onclick="scrollTo('scheduled')"><span class="method-badge post">POST</span> Schedule Message</a>
+
+    <div class="sn-group">Contacts</div>
+    <a href="#contacts"  class="sn-item" onclick="scrollTo('contacts')">Contacts CRUD</a>
+    <a href="#optouts"   class="sn-item" onclick="scrollTo('optouts')">Opt-outs / STOP</a>
+    <a href="#lookup"    class="sn-item" onclick="scrollTo('lookup')">Number Lookup</a>
+
+    <div class="sn-group">Devices</div>
+    <a href="#devices"   class="sn-item" onclick="scrollTo('devices')">Devices</a>
+    <a href="#numbers"   class="sn-item" onclick="scrollTo('numbers')">Number Pool</a>
+
+    <div class="sn-group">Campaigns</div>
+    <a href="#campaigns" class="sn-item" onclick="scrollTo('campaigns')">Campaigns</a>
+    <a href="#templates" class="sn-item" onclick="scrollTo('templates')">Templates</a>
+
+    <div class="sn-group">Automation</div>
+    <a href="#webhooks"  class="sn-item" onclick="scrollTo('webhooks')">Webhooks</a>
+    <a href="#llm"       class="sn-item" onclick="scrollTo('llm')">LLM / AI Auto-reply</a>
+    <a href="#sse"       class="sn-item" onclick="scrollTo('sse')">SSE Events</a>
+
+    <div class="sn-group">Analytics</div>
+    <a href="#analytics" class="sn-item" onclick="scrollTo('analytics')">Analytics</a>
+
+    <div class="sn-group">Admin</div>
+    <a href="#apikeys"   class="sn-item" onclick="scrollTo('apikeys')">API Keys</a>
+    <a href="#compat"    class="sn-item" onclick="scrollTo('compat')">Twilio Compat</a>
+  </nav>
+</aside>
+
+<div class="main" id="mainContent">
+  <a href="/" class="back">← Back to Console</a>
+
+  <h1>Api<em>X</em> Gateway — API Reference</h1>
+  <p class="subtitle">
+    REST API v2 · WebSocket agent protocol · Server-Sent Events<br>
+    Base URL: <code id="baseUrl">http://&lt;server-ip&gt;:3000</code>
+    &nbsp;·&nbsp;All endpoints return JSON
+  </p>
+
+  <!-- ── AUTH ──────────────────────────────────────────────── -->
+  <div class="section" id="auth">
+    <div class="section-title">🔑 Authentication</div>
+    <p class="section-sub">All write endpoints require an API key. Read endpoints work without a key by default (configurable).</p>
+
+    <div class="info">
+      <div class="info-icon">ℹ️</div>
+      <div>Pass the API key in the <code>X-API-Key</code> header, or as <code>Authorization: Bearer &lt;key&gt;</code>, or as <code>?api_key=&lt;key&gt;</code> query parameter.</div>
+    </div>
+
+    <div class="ep-section">Example Request</div>
+    <pre>curl -X POST http://localhost:3000/api/v1/messages/send \
+  -H "X-API-Key: apix_abc123..." \
+  -H "Content-Type: application/json" \
+  -d '{"to":"+15551234567","body":"Hello from ApiX!"}'</pre>
+
+    <div class="ep-section">Create your first API key (via console or terminal)</div>
+    <pre># Via curl (from same server, no auth required to create first key)
+curl -X POST http://localhost:3000/api/v1/apikeys \
+  -H "Content-Type: application/json" \
+  -d '{"name":"My App","permissions":["*"]}'
+
+# Response: { "key": "apix_...", "id": "key_..." }
+# SAVE THE KEY — it will never be shown again!</pre>
+
+    <div class="ep-section">Permissions</div>
+    <table class="pt"><thead><tr><th>Permission</th><th>Description</th></tr></thead><tbody>
+      <tr><td><code>*</code></td><td>Full access to all endpoints</td></tr>
+      <tr><td><code>messages:read</code></td><td>Read messages, conversations</td></tr>
+      <tr><td><code>messages:write</code></td><td>Send SMS/MMS, bulk send</td></tr>
+      <tr><td><code>devices:read</code></td><td>Read device list and status</td></tr>
+      <tr><td><code>devices:write</code></td><td>Approve, suspend, delete devices</td></tr>
+      <tr><td><code>webhooks:write</code></td><td>Create and manage webhooks</td></tr>
+      <tr><td><code>campaigns:write</code></td><td>Create and manage campaigns</td></tr>
+    </tbody></table>
+  </div>
+
+  <!-- ── STATUS ──────────────────────────────────────────────── -->
+  <div class="section" id="status">
+    <div class="section-title">📡 Status &amp; Health</div>
+    <div class="endpoint">
+      <div class="ep-head" onclick="toggle(this)">
+        <span class="ep-method get">GET</span>
+        <span class="ep-path">/api/v1/status</span>
+        <span class="ep-desc">Server status, device counts, message stats, LLM health</span>
+      </div>
+      <div class="ep-body open">
+        <div class="ep-section">Response Example</div>
+        <pre>{
+  "status": "ok",
+  "uptime": 3600.5,
+  "version": "2.0.0",
+  "messages": { "sent": 142, "received": 38, "failed": 2, "outbound_total": 150 },
+  "devices": { "total": 4, "online": 3, "pending": 1, "approved": 3 },
+  "campaigns": { "total": 5, "running": 2 },
+  "llm": { "instances": 2, "healthy": 2 }
+}</pre>
+      </div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-head" onclick="toggle(this)">
+        <span class="ep-method get">GET</span>
+        <span class="ep-path">/health</span>
+        <span class="ep-desc">Minimal health check (for load balancers)</span>
+      </div>
+      <div class="ep-body">
+        <pre>{ "status": "ok", "ts": "2026-03-14T10:00:00.000Z" }</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SEND SMS ──────────────────────────────────────────────── -->
+  <div class="section" id="send">
+    <div class="section-title">✉️ Send SMS / MMS</div>
+    <div class="endpoint">
+      <div class="ep-head" onclick="toggle(this)">
+        <span class="ep-method post">POST</span>
+        <span class="ep-path">/api/v1/messages/send</span>
+        <span class="ep-desc">Send a single SMS or MMS</span>
+      </div>
+      <div class="ep-body open">
+        <div class="ep-section">Request Body</div>
+        <table class="pt"><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody>
+          <tr><td><code>to</code></td><td class="type-badge">string</td><td><span class="req">required</span></td><td class="param-desc">Recipient phone number (E.164 or local)</td></tr>
+          <tr><td><code>body</code></td><td class="type-badge">string</td><td><span class="req">required*</span></td><td class="param-desc">Message text (* or use template_id)</td></tr>
+          <tr><td><code>from</code></td><td class="type-badge">string</td><td><span class="opt">optional</span></td><td class="param-desc">Sender number. Auto-selects from pool if omitted</td></tr>
+          <tr><td><code>type</code></td><td class="type-badge">sms|mms</td><td><span class="opt">optional</span></td><td class="param-desc">Default: sms</td></tr>
+          <tr><td><code>media_url</code></td><td class="type-badge">string</td><td><span class="opt">optional</span></td><td class="param-desc">URL of media attachment (MMS)</td></tr>
+          <tr><td><code>template_id</code></td><td class="type-badge">string</td><td><span class="opt">optional</span></td><td class="param-desc">Template ID — body is rendered from this</td></tr>
+          <tr><td><code>variables</code></td><td class="type-badge">object</td><td><span class="opt">optional</span></td><td class="param-desc">Template variables e.g. <code>{"first_name":"John"}</code></td></tr>
+          <tr><td><code>device_id</code></td><td class="type-badge">string</td><td><span class="opt">optional</span></td><td class="param-desc">Force a specific device to send</td></tr>
+        </tbody></table>
+        <div class="ep-section">Request Example</div>
+        <pre>POST /api/v1/messages/send
+X-API-Key: apix_...
+Content-Type: application/json
+
+{
+  "to": "+15551234567",
+  "body": "Hello {first_name}!",
+  "template_id": "tpl_abc123",
+  "variables": { "first_name": "Alice" }
+}</pre>
+        <div class="ep-section">Response (202 Accepted)</div>
+        <pre>{
+  "success": true,
+  "msgId": "msg_abc123xyz",
+  "to": "+15551234567",
+  "from": "+15559876543",
+  "deviceId": "dev_abc123",
+  "status": "queued"
+}</pre>
+        <div class="ep-section">Opt-out Error (422)</div>
+        <pre>{ "error": "+15551234567 has opted out.", "code": "OPT_OUT" }</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── BULK ──────────────────────────────────────────────── -->
+  <div class="section" id="bulk">
+    <div class="section-title">📦 Bulk Send</div>
+    <div class="info"><div class="info-icon">ℹ️</div>
+      <div>Bulk send queues messages asynchronously. Opt-out numbers are automatically filtered. Max 10,000 messages per request.</div></div>
+    <div class="endpoint">
+      <div class="ep-head" onclick="toggle(this)">
+        <span class="ep-method post">POST</span>
+        <span class="ep-path">/api/v1/messages/bulk</span>
+        <span class="ep-desc">Send up to 10,000 messages in one API call</span>
+      </div>
+      <div class="ep-body open">
+        <div class="ep-section">Request Body</div>
+        <pre>{
+  "messages": [
+    { "to": "+15551234567", "body": "Hi Alice!" },
+    { "to": "+15559876543", "body": "Hi Bob!", "variables": { "name": "Bob" } }
+  ],
+  "from": "+15550001111",      // optional sender override
+  "template_id": "tpl_abc123" // optional — renders body from template for each row
+}</pre>
+        <div class="ep-section">Response (202 Accepted)</div>
+        <pre>{
+  "success": true,
+  "queued": 1998,
+  "skipped": 2,
+  "skipped_details": [
+    { "to": "+15559991111", "reason": "opted_out" }
+  ]
+}</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── LIST MESSAGES ──────────────────────────────────────────────── -->
+  <div class="section" id="list-msgs">
+    <div class="section-title">📋 List Messages</div>
+    <div class="endpoint">
+      <div class="ep-head" onclick="toggle(this)">
+        <span class="ep-method get">GET</span>
+        <span class="ep-path">/api/v1/messages</span>
+        <span class="ep-desc">List messages with filtering and pagination</span>
+      </div>
+      <div class="ep-body open">
+        <div class="ep-section">Query Parameters</div>
+        <table class="pt"><thead><tr><th>Param</th><th>Type</th><th>Description</th></tr></thead><tbody>
+          <tr><td><code>direction</code></td><td class="type-badge">inbound|outbound</td><td class="param-desc">Filter by direction</td></tr>
+          <tr><td><code>status</code></td><td class="type-badge">string</td><td class="param-desc">queued|sent|delivered|failed|received</td></tr>
+          <tr><td><code>from</code></td><td class="type-badge">string</td><td class="param-desc">Filter by sender number</td></tr>
+          <tr><td><code>to</code></td><td class="type-badge">string</td><td class="param-desc">Filter by recipient number</td></tr>
+          <tr><td><code>limit</code></td><td class="type-badge">integer</td><td class="param-desc">Max results (default 50, max 500)</td></tr>
+          <tr><td><code>cursor</code></td><td class="type-badge">ISO timestamp</td><td class="param-desc">Pagination cursor (created_at of last item)</td></tr>
+          <tr><td><code>campaign_id</code></td><td class="type-badge">string</td><td class="param-desc">Filter by campaign</td></tr>
+        </tbody></table>
+      </div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-head" onclick="toggle(this)">
+        <span class="ep-method get">GET</span>
+        <span class="ep-path">/api/v1/messages/:id</span>
+        <span class="ep-desc">Get a single message by ID</span>
+      </div>
+      <div class="ep-body">
+        <pre>{
+  "id": "msg_abc123",
+  "direction": "outbound",
+  "from_number": "+15550001111",
+  "to_number": "+15551234567",
+  "body": "Hello!",
+  "type": "sms",
+  "status": "delivered",
+  "num_segments": 1,
+  "device_id": "dev_abc123",
+  "created_at": "2026-03-14T10:00:00Z",
+  "delivered_at": "2026-03-14T10:00:05Z"
+}</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SCHEDULED ──────────────────────────────────────────────── -->
+  <div class="section" id="scheduled">
+    <div class="section-title">⏰ Scheduled Messages</div>
+    <div class="endpoint">
+      <div class="ep-head" onclick="toggle(this)">
+        <span class="ep-method post">POST</span>
+        <span class="ep-path">/api/v1/scheduled</span>
+        <span class="ep-desc">Schedule a message for future delivery</span>
+      </div>
+      <div class="ep-body open">
+        <pre>POST /api/v1/scheduled
+{ "to": "+15551234567", "body": "Reminder: your appointment is tomorrow!",
+  "schedule_at": "2026-03-15T09:00:00Z", "from": "+15550001111" }</pre>
+        <pre>{ "success": true, "id": "sched_abc123", "schedule_at": "2026-03-15T09:00:00.000Z" }</pre>
+      </div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-head" onclick="toggle(this)">
+        <span class="ep-method delete">DELETE</span>
+        <span class="ep-path">/api/v1/scheduled/:id</span>
+        <span class="ep-desc">Cancel a pending scheduled message</span>
+      </div>
+      <div class="ep-body"><pre>{ "success": true }</pre></div>
+    </div>
+  </div>
+
+  <!-- ── WEBHOOKS ──────────────────────────────────────────────── -->
+  <div class="section" id="webhooks">
+    <div class="section-title">🔗 Webhooks</div>
+    <p class="section-sub">Configure URLs to receive real-time event notifications. Supports JSON, Twilio-compatible, and n8n formats with optional HMAC-SHA256 signatures.</p>
+
+    <div class="info"><div class="info-icon">🔒</div>
+      <div>Webhook requests include the header <code>X-ApiX-Signature: sha256=...</code> (and <code>X-Twilio-Signature</code> alias) when a secret is configured. Verify it with: <code>HMAC-SHA256(secret, requestBody)</code></div></div>
+
+    <div class="ep-section">Available Events</div>
+    <pre>message.inbound    — inbound SMS/MMS received
+message.outbound   — outbound message queued
+message.delivered  — delivery confirmed
+message.failed     — message failed to send
+message.status     — any status change
+device.online      — device connected
+device.offline     — device disconnected
+device.registered  — new device registered
+campaign.started   — campaign started
+campaign.completed — campaign completed
+optout.received    — STOP keyword received
+*                  — all events</pre>
+
+    <div class="endpoint">
+      <div class="ep-head" onclick="toggle(this)">
+        <span class="ep-method post">POST</span>
+        <span class="ep-path">/api/v1/webhooks</span>
+        <span class="ep-desc">Create webhook endpoint</span>
+      </div>
+      <div class="ep-body open">
+        <div class="ep-section">Request</div>
+        <pre>{
+  "name": "n8n Automation",
+  "url": "https://n8n.example.com/webhook/apix",
+  "events": ["message.inbound", "optout.received"],
+  "secret": "my-secret-key",
+  "format": "n8n"   // json | twilio | n8n
+}</pre>
+        <div class="ep-section">Payload Formats</div>
+        <div class="ep-section" style="font-size:9px;margin-top:8px;">JSON (default)</div>
+        <pre>{ "event": "message.inbound", "timestamp": "...",
+  "data": { "id": "msg_...", "from": "+1555...", "to": "+1555...", "body": "..." } }</pre>
+        <div class="ep-section" style="font-size:9px;margin-top:8px;">Twilio format</div>
+        <pre>{ "MessageSid": "msg_...", "From": "+1555...", "To": "+1555...", "Body": "...",
+  "NumSegments": "1", "MessageStatus": "received" }</pre>
+        <div class="ep-section" style="font-size:9px;margin-top:8px;">n8n format</div>
+        <pre>{ "headers": { "x-apix-event": "message.inbound" },
+  "body": { "event": "...", "data": { ... } } }</pre>
+      </div>
+    </div>
+
+    <div class="endpoint">
+      <div class="ep-head" onclick="toggle(this)">
+        <span class="ep-method post">POST</span>
+        <span class="ep-path">/api/v1/webhooks/:id/rules</span>
+        <span class="ep-desc">Add a filter rule (only dispatch if rule matches)</span>
+      </div>
+      <div class="ep-body open">
+        <div class="ep-section">Request — available operators: equals, not_equals, contains, not_contains, starts_with, ends_with, regex</div>
+        <pre>{ "field": "data.from", "operator": "starts_with", "value": "+1555" }
+// Only fire webhook if "from" starts with +1555
+
+{ "field": "data.body", "operator": "regex", "value": "STOP|UNSUBSCRIBE" }
+// Only fire if body matches regex</pre>
+      </div>
+    </div>
+
+    <div class="endpoint">
+      <div class="ep-head" onclick="toggle(this)">
+        <span class="ep-method post">POST</span>
+        <span class="ep-path">/api/v1/webhooks/:id/test</span>
+        <span class="ep-desc">Send a test event to the webhook</span>
+      </div>
+      <div class="ep-body"><pre>{ "success": true, "message": "Test event dispatched" }</pre></div>
+    </div>
+  </div>
+
+  <!-- ── LLM ──────────────────────────────────────────────── -->
+  <div class="section" id="llm">
+    <div class="section-title">🤖 LLM / AI Auto-reply</div>
+    <p class="section-sub">Connect Ollama, LM Studio, LocalAI, OpenRouter, Groq, Together AI, or any OpenAI-compatible endpoint. Supports weighted load balancing across multiple instances and per-contact conversation context.</p>
+
+    <div class="info green"><div class="info-icon">✅</div>
+      <div>Supported types: <code>ollama</code> · <code>openai</code> · <code>lmstudio</code> · <code>localai</code> · <code>groq</code> · <code>together</code> · <code>openrouter</code> · <code>custom</code> (OpenAI-compat)</div></div>
+
+    <div class="endpoint">
+      <div class="ep-head" onclick="toggle(this)">
+        <span class="ep-method post">POST</span>
+        <span class="ep-path">/api/v1/llm/instances</span>
+        <span class="ep-desc">Add an LLM backend instance</span>
+      </div>
+      <div class="ep-body open">
+        <div class="ep-section">Ollama example</div>
+        <pre>{
+  "name": "Local Llama3",
+  "type": "ollama",
+  "base_url": "http://localhost:11434",
+  "model": "llama3:8b",
+  "system_prompt": "You are a helpful SMS assistant. Keep replies under 160 chars.",
+  "weight": 1
+}</pre>
+        <div class="ep-section">LM Studio / OpenAI-compat example</div>
+        <pre>{
+  "name": "LM Studio",
+  "type": "lmstudio",
+  "base_url": "http://localhost:1234",
+  "model": "lmstudio-community/Meta-Llama-3-8B-Instruct-GGUF",
+  "weight": 2
+}</pre>
+        <div class="ep-section">OpenRouter / Groq / cloud example</div>
+        <pre>{
+  "name": "Groq Mixtral",
+  "type": "openai",
+  "base_url": "https://api.groq.com/openai",
+  "model": "mixtral-8x7b-32768",
+  "api_key": "gsk_...",
+  "weight": 3,
+  "timeout_ms": 10000
+}</pre>
+      </div>
+    </div>
+
+    <div class="endpoint">
+      <div class="ep-head" onclick="toggle(this)">
+        <span class="ep-method post">POST</span>
+        <span class="ep-path">/api/v1/llm/rules</span>
+        <span class="ep-desc">Create auto-reply rules for inbound messages</span>
+      </div>
+      <div class="ep-body open">
+        <pre>// Auto-reply ALL inbound messages
+{ "name": "Reply all", "trigger_type": "all", "llm_id": "llm_abc123", "auto_reply": true }
+
+// Reply only if body contains "help"
+{ "name": "Help desk", "trigger_type": "keyword", "trigger_value": "help",
+  "llm_id": "llm_abc123", "auto_reply": true }
+
+// Reply only to specific sender number
+{ "name": "VIP", "trigger_type": "from", "trigger_value": "+15551234567",
+  "llm_id": "llm_abc123", "auto_reply": true }
+
+// Use regex
+{ "name": "Order queries", "trigger_type": "regex", "trigger_value": "order|track|ship",
+  "llm_id": "llm_abc123", "auto_reply": true }</pre>
+      </div>
+    </div>
+
+    <div class="endpoint">
+      <div class="ep-head" onclick="toggle(this)">
+        <span class="ep-method post">POST</span>
+        <span class="ep-path">/api/v1/llm/chat</span>
+        <span class="ep-desc">Direct chat API (picks healthiest instance automatically)</span>
+      </div>
+      <div class="ep-body open">
+        <pre>POST /api/v1/llm/chat
+{ "message": "What's the weather like?", "session_id": "+15551234567" }
+// session_id is used to maintain conversation context per user
+
+{ "reply": "I'm an SMS assistant. How can I help you today?",
+  "instance_id": "llm_abc123", "model": "llama3:8b" }</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── CONTACTS ──────────────────────────────────────────────── -->
+  <div class="section" id="contacts">
+    <div class="section-title">👥 Contacts</div>
+    <div class="endpoint">
+      <div class="ep-head" onclick="toggle(this)">
+        <span class="ep-method post">POST</span>
+        <span class="ep-path">/api/v1/contacts/import</span>
+        <span class="ep-desc">Bulk import contacts from array</span>
+      </div>
+      <div class="ep-body open">
+        <pre>{
+  "contacts": [
+    { "number": "+15551234567", "first_name": "Alice", "last_name": "Smith",
+      "tags": ["vip","customer"], "custom_data": { "plan": "pro" } },
+    { "number": "+15559876543", "first_name": "Bob" }
+  ]
+}
+// Response: { "imported": 2, "failed": 0, "total": 2 }</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── OPT-OUTS ──────────────────────────────────────────────── -->
+  <div class="section" id="optouts">
+    <div class="section-title">🚫 Opt-outs / STOP List</div>
+    <div class="info warn"><div class="info-icon">⚠️</div>
+      <div>Opt-outs are <strong>automatically processed</strong> when a device receives STOP, STOPALL, or UNSUBSCRIBE. Numbers on the opt-out list are <strong>automatically blocked</strong> from outbound messages.</div></div>
+
+    <div class="endpoint">
+      <div class="ep-head" onclick="toggle(this)">
+        <span class="ep-method post">POST</span>
+        <span class="ep-path">/api/v1/optouts/check</span>
+        <span class="ep-desc">Check if a number is on the opt-out list</span>
+      </div>
+      <div class="ep-body open">
+        <pre>POST /api/v1/optouts/check
+{ "number": "+15551234567" }
+→ { "number": "+15551234567", "opted_out": true }</pre>
+      </div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-head" onclick="toggle(this)">
+        <span class="ep-method delete">DELETE</span>
+        <span class="ep-path">/api/v1/optouts/:number</span>
+        <span class="ep-desc">Re-subscribe — remove from opt-out list</span>
+      </div>
+      <div class="ep-body"><pre>DELETE /api/v1/optouts/+15551234567
+→ { "success": true }</pre></div>
+    </div>
+  </div>
+
+  <!-- ── LOOKUP ──────────────────────────────────────────────── -->
+  <div class="section" id="lookup">
+    <div class="section-title">🔍 Number Lookup</div>
+    <div class="endpoint">
+      <div class="ep-head" onclick="toggle(this)">
+        <span class="ep-method get">GET</span>
+        <span class="ep-path">/api/v1/lookup/:number</span>
+        <span class="ep-desc">Lookup a phone number — format, country, opt-out status, contact info</span>
+      </div>
+      <div class="ep-body open">
+        <pre>GET /api/v1/lookup/+15551234567
+
+{
+  "number": "+15551234567",
+  "formatted": "+1 (555) 123-4567",
+  "country_code": "+1",
+  "country": "US/Canada",
+  "line_type": "mobile",
+  "valid": true,
+  "opt_out": false,
+  "contact": { "id": "con_...", "first_name": "Alice", "tags": ["vip"] }
+}</pre>
+      </div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-head" onclick="toggle(this)">
+        <span class="ep-method post">POST</span>
+        <span class="ep-path">/api/v1/lookup/batch</span>
+        <span class="ep-desc">Batch lookup up to 100 numbers</span>
+      </div>
+      <div class="ep-body"><pre>{ "numbers": ["+15551234567", "+15559876543"] }</pre></div>
+    </div>
+  </div>
+
+  <!-- ── TEMPLATES ──────────────────────────────────────────────── -->
+  <div class="section" id="templates">
+    <div class="section-title">📝 Message Templates</div>
+    <div class="endpoint">
+      <div class="ep-head" onclick="toggle(this)">
+        <span class="ep-method post">POST</span>
+        <span class="ep-path">/api/v1/templates</span>
+        <span class="ep-desc">Create reusable message template with variable substitution</span>
+      </div>
+      <div class="ep-body open">
+        <pre>{
+  "name": "Welcome SMS",
+  "body": "Hi {first_name}! Welcome to {company}. Reply STOP to opt out.",
+  "category": "Transactional"
+}
+// Variables are auto-detected from {placeholder} syntax</pre>
+      </div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-head" onclick="toggle(this)">
+        <span class="ep-method post">POST</span>
+        <span class="ep-path">/api/v1/templates/:id/render</span>
+        <span class="ep-desc">Preview template with variables</span>
+      </div>
+      <div class="ep-body open">
+        <pre>{ "variables": { "first_name": "Alice", "company": "ApiX Corp" } }
+→ { "rendered": "Hi Alice! Welcome to ApiX Corp. Reply STOP to opt out.",
+    "char_count": 56, "sms_segments": 1 }</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── ANALYTICS ──────────────────────────────────────────────── -->
+  <div class="section" id="analytics">
+    <div class="section-title">📊 Analytics</div>
+    <div class="endpoint">
+      <div class="ep-head" onclick="toggle(this)">
+        <span class="ep-method get">GET</span>
+        <span class="ep-path">/api/v1/analytics/overview</span>
+        <span class="ep-desc">Comprehensive overview of all stats</span>
+      </div>
+      <div class="ep-body open">
+        <pre>{
+  "today": { "sent": 142, "received": 38, "failed": 2 },
+  "devices": { "total": 4, "approved": 3, "pending": 1 },
+  "campaigns": { "total": 5, "running": 2, "total_sent": 48200 },
+  "opt_outs": 14, "contacts": 5284
+}</pre>
+      </div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-head" onclick="toggle(this)">
+        <span class="ep-method get">GET</span>
+        <span class="ep-path">/api/v1/analytics/messages?from=2026-03-01&amp;to=2026-03-14</span>
+        <span class="ep-desc">Message stats for a date range + hourly breakdown</span>
+      </div>
+      <div class="ep-body">
+        <pre>{
+  "stats": { "total": 1842, "sent": 1600, "received": 240, "failed": 2, "delivered": 1590, "mms": 12 },
+  "hourly": [ { "hour": "2026-03-14T09:00:00", "outbound": 45, "inbound": 8, "failed": 0 }, ... ]
+}</pre>
+      </div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-head" onclick="toggle(this)">
+        <span class="ep-method get">GET</span>
+        <span class="ep-path">/api/v1/analytics/numbers</span>
+        <span class="ep-desc">Per-sender-number delivery rate stats</span>
+      </div>
+      <div class="ep-body">
+        <pre>[{ "number": "+15550001111", "total_sent": 1200, "delivered": 1188, "failed": 12, "delivery_rate": 99.0 }]</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SSE ──────────────────────────────────────────────── -->
+  <div class="section" id="sse">
+    <div class="section-title">📡 Server-Sent Events</div>
+    <p class="section-sub">Real-time event stream. Connect once and receive all events as they happen.</p>
+    <div class="endpoint">
+      <div class="ep-head" onclick="toggle(this)">
+        <span class="ep-method get">GET</span>
+        <span class="ep-path">/api/v1/events</span>
+        <span class="ep-desc">SSE stream — connect and receive live events</span>
+      </div>
+      <div class="ep-body open">
+        <div class="ep-section">JavaScript Example</div>
+        <pre>const es = new EventSource('http://localhost:3000/api/v1/events');
+es.addEventListener('message:inbound', e => {
+  const data = JSON.parse(e.data);
+  console.log('SMS from', data.from, ':', data.body);
+});
+es.addEventListener('device:online', e => {
+  console.log('Device came online:', JSON.parse(e.data).deviceId);
+});</pre>
+        <div class="ep-section">Event types</div>
+        <pre>message:inbound   message:status   message:queued
+device:online     device:offline   device:registered
+optout:received</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── API KEYS ──────────────────────────────────────────────── -->
+  <div class="section" id="apikeys">
+    <div class="section-title">🗝 API Keys</div>
+    <div class="endpoint">
+      <div class="ep-head" onclick="toggle(this)">
+        <span class="ep-method post">POST</span>
+        <span class="ep-path">/api/v1/apikeys</span>
+        <span class="ep-desc">Generate a new API key</span>
+      </div>
+      <div class="ep-body open">
+        <pre>{ "name": "Production App", "permissions": ["messages:read","messages:write"] }
+→ { "key": "apix_...", "id": "key_...", "prefix": "apix_abc12..." }
+// KEY IS SHOWN ONCE — store it securely!</pre>
+      </div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-head" onclick="toggle(this)">
+        <span class="ep-method post">POST</span>
+        <span class="ep-path">/api/v1/apikeys/:id/revoke</span>
+        <span class="ep-desc">Revoke an API key (disable without deleting)</span>
+      </div>
+      <div class="ep-body"><pre>{ "success": true, "message": "API key revoked." }</pre></div>
+    </div>
+  </div>
+
+  <!-- ── TWILIO COMPAT ──────────────────────────────────────────────── -->
+  <div class="section" id="compat">
+    <div class="section-title">🔄 Twilio Compatibility</div>
+    <div class="info green"><div class="info-icon">✅</div>
+      <div>ApiX Gateway accepts Twilio-formatted webhook payloads and provides a Twilio-compatible message endpoint, making it a drop-in replacement for Twilio in many integrations.</div></div>
+    <div class="endpoint">
+      <div class="ep-head" onclick="toggle(this)">
+        <span class="ep-method post">POST</span>
+        <span class="ep-path">/api/v1/messages/twilio-compat</span>
+        <span class="ep-desc">Twilio REST API-compatible send endpoint</span>
+      </div>
+      <div class="ep-body open">
+        <pre>// Same field names as Twilio
+{ "To": "+15551234567", "From": "+15550001111", "Body": "Hello!" }
+
+// Response matches Twilio MessageInstance structure
+{ "sid": "msg_...", "from": "+15550001111", "to": "+15551234567",
+  "body": "Hello!", "status": "queued", "direction": "outbound-api",
+  "num_segments": "1", "date_created": "2026-03-14T10:00:00.000Z" }</pre>
+        <div class="ep-section">Using the Twilio Node SDK</div>
+        <pre>const twilio = require('twilio');
+// Point the client at your ApiX Gateway
+const client = twilio('AC_apix', 'your-api-key', {
+  edge: null,
+  httpClient: { /* override baseUrl */ },
+});
+// Or simply call the REST endpoint directly with form-encoded Twilio params</pre>
+      </div>
+    </div>
+    <div class="ep-section" style="margin-top:16px;">Webhook format when receiving from Twilio-compatible systems</div>
+    <pre>// When you set a webhook format to "twilio", outgoing payloads use Twilio field names:
+{
+  "MessageSid": "msg_abc123",
+  "From": "+15551234567",
+  "To": "+15559876543",
+  "Body": "Hello!",
+  "NumSegments": "1",
+  "NumMedia": "0",
+  "MessageStatus": "received"
+}</pre>
+  </div>
+
+  <!-- ── DEVICES ──────────────────────────────────────────────── -->
+  <div class="section" id="devices">
+    <div class="section-title">📱 Devices</div>
+    <div class="endpoint">
+      <div class="ep-head" onclick="toggle(this)">
+        <span class="ep-method get">GET</span>
+        <span class="ep-path">/api/v1/devices</span>
+        <span class="ep-desc">List all registered Android devices</span>
+      </div>
+      <div class="ep-body open">
+        <pre>[{
+  "id": "dev_abc123",
+  "name": "Office Android #1",
+  "model": "Samsung Galaxy S24",
+  "android_version": "14",
+  "status": "approved",
+  "battery": 84,
+  "signal": "[-68,-72]",
+  "sent_today": 142,
+  "last_seen": "2026-03-14T09:58:00Z",
+  "sims": [
+    { "slot": 1, "number": "+15550001111", "carrier": "T-Mobile", "signal": -68 },
+    { "slot": 2, "number": "+15550002222", "carrier": "AT&T",     "signal": -72 }
+  ]
+}]</pre>
+      </div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-head" onclick="toggle(this)">
+        <span class="ep-method post">POST</span>
+        <span class="ep-path">/api/v1/devices/:id/approve</span>
+        <span class="ep-desc">Approve a pending device to allow it to send/receive</span>
+      </div>
+      <div class="ep-body"><pre>{ "success": true }</pre></div>
+    </div>
+  </div>
+
+  <!-- ── NUMBERS ──────────────────────────────────────────────── -->
+  <div class="section" id="numbers">
+    <div class="section-title">📞 Number Pool</div>
+    <div class="endpoint">
+      <div class="ep-head" onclick="toggle(this)">
+        <span class="ep-method get">GET</span>
+        <span class="ep-path">/api/v1/numbers</span>
+        <span class="ep-desc">All available SIM numbers from approved devices</span>
+      </div>
+      <div class="ep-body open">
+        <pre>[{
+  "number": "+15550001111",
+  "carrier": "T-Mobile",
+  "deviceId": "dev_abc123",
+  "deviceName": "Office Android #1",
+  "online": true,
+  "battery": 84,
+  "signal": -68,
+  "daily_sent": 142
+}]</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── CAMPAIGNS ──────────────────────────────────────────────── -->
+  <div class="section" id="campaigns">
+    <div class="section-title">🚀 Campaigns</div>
+    <div class="endpoint">
+      <div class="ep-head" onclick="toggle(this)">
+        <span class="ep-method post">POST</span>
+        <span class="ep-path">/api/v1/campaigns</span>
+        <span class="ep-desc">Create a campaign</span>
+      </div>
+      <div class="ep-body open">
+        <pre>{
+  "name": "Spring Promo",
+  "message_tpl": "Hi {first_name}, your spring offer: {link}. Reply STOP to opt out.",
+  "numbers": ["+15550001111", "+15550002222"],
+  "strategy": "round_robin",  // round_robin|least_recent|least_today|random
+  "delay_min": 8,
+  "delay_max": 30,
+  "rate_per_hr": 15,
+  "total": 5000,
+  "schedule_type": "immediate"   // immediate|scheduled|window|drip
+}</pre>
+      </div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-head" onclick="toggle(this)">
+        <span class="ep-method patch">PATCH</span>
+        <span class="ep-path">/api/v1/campaigns/:id/status</span>
+        <span class="ep-desc">Update campaign status</span>
+      </div>
+      <div class="ep-body"><pre>{ "status": "running" }  // draft|running|paused|scheduled|done</pre></div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+</div><!-- /shell -->
+
+<script>
+// Set base URL dynamically
+document.getElementById('baseUrl').textContent = location.origin;
+
+function toggle(head) {
+  const body = head.nextElementSibling;
+  body.classList.toggle('open');
+}
+function scrollTo(id) {
+  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// Highlight active section on scroll
+const sections = document.querySelectorAll('.section[id]');
+const navLinks  = document.querySelectorAll('.sn-item[href]');
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      navLinks.forEach(l => {
+        l.classList.toggle('active', l.getAttribute('href') === '#' + e.target.id);
+      });
+    }
+  });
+}, { rootMargin: '-10% 0px -70% 0px' });
+sections.forEach(s => obs.observe(s));
+</script>
+</body>
+</html>
