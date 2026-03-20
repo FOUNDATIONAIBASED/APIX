@@ -20,13 +20,15 @@ on:
 permissions:
   contents: write
 
+# Opt into Node 24 for JS-based actions (quiet Node 20 deprecation warnings until defaults change)
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   # ── ApiX Agent (standalone client) — JDK 17 + modern Gradle ─────────────
   build-client:
     name: Build ApiX Agent APK
     runs-on: ubuntu-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     outputs:
       version: ${{ steps.version.outputs.version }}
       version_code: ${{ steps.version.outputs.version_code }}
@@ -140,8 +142,6 @@ jobs:
   build-qksms:
     name: Build ApiX QKSMS (gateway) APK
     runs-on: ubuntu-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Checkout repository
@@ -168,11 +168,11 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
+      # setup-gradle@v4 has no build-root-directory; cache applies globally. Gradle runs via working-directory below.
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: wrapper
-          build-root-directory: test/qksms
 
       - name: Set up Android SDK (matches test/qksms compileSdk 33)
         uses: android-actions/setup-android@v3
