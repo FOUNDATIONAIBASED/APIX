@@ -48,3 +48,7 @@ Thumbs.db
 /client/.gradle/
 /client/local.properties
 /captures/
+
+# QKSMS fork — local/CI JDK trees (never push; GitHub rejects lib/modules >100MB)
+test/qksms/.ci-jdk11/
+test/qksms/.ci-jdk*/
