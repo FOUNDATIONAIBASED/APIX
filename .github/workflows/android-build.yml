@@ -122,6 +122,45 @@ jobs:
           echo "Agent APK files:"
           find client/app/build/outputs/apk -name "*.apk" -ls 2>/dev/null || true
 
+      - name: Job summary — ApiX Agent
+        if: always()
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          VCODE: ${{ steps.version.outputs.version_code }}
+        run: |
+          {
+            echo "## 📱 ApiX Agent — build summary"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| **Version name** | \`$VERSION\` |"
+            echo "| **Version code** | \`$VCODE\` |"
+            echo "| **Project** | \`client/\` |"
+            echo "| **Tasks** | \`assembleDebug\` (+ \`assembleRelease\` when keystore configured) |"
+            echo "| **JDK** | 17 (Eclipse Temurin) |"
+            echo ""
+            echo "### Output APKs"
+          } >> "$GITHUB_STEP_SUMMARY"
+          shopt -s nullglob
+          apks=(client/app/build/outputs/apk/*/*.apk)
+          if ((${#apks[@]})); then
+            echo "| File | Size |" >> "$GITHUB_STEP_SUMMARY"
+            echo "|------|------|" >> "$GITHUB_STEP_SUMMARY"
+            for f in "${apks[@]}"; do
+              [[ -f "$f" ]] || continue
+              sz=$(du -h "$f" | cut -f1)
+              echo "| \`$(basename "$f")\` | $sz |" >> "$GITHUB_STEP_SUMMARY"
+            done
+          else
+            echo "_No APK files found under \`client/app/build/outputs/apk\` (build may have failed)._ " >> "$GITHUB_STEP_SUMMARY"
+          fi
+          {
+            echo ""
+            echo "### Artifacts"
+            echo "- **Debug:** \`apix-agent-debug-${VERSION}\`"
+            echo "- **Release:** \`apix-agent-release-${VERSION}\` (if produced)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Upload debug APK artifact
         uses: actions/upload-artifact@v4
         with:
@@ -213,6 +252,48 @@ jobs:
           done
           echo "QKSMS APK files:"
           find test/qksms/presentation/build/outputs/apk -name "*.apk" -ls 2>/dev/null || true
+
+      - name: Job summary — ApiX QKSMS (gateway)
+        if: always()
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          VCODE: ${{ steps.version.outputs.version_code }}
+        run: |
+          {
+            echo "## 📱 ApiX QKSMS (gateway) — build summary"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| **Version name** | \`$VERSION\` |"
+            echo "| **Version code** | \`$VCODE\` |"
+            echo "| **Project** | \`test/qksms/\` |"
+            echo "| **Gradle task** | \`:presentation:assembleNoAnalyticsDebug\` |"
+            echo "| **Variant** | \`noAnalytics\` **debug** |"
+            echo "| **compileSdk** | 33 · **build-tools** 33.0.2 |"
+            echo "| **JDK** | 17 (Eclipse Temurin) |"
+            echo ""
+            echo "### Output APKs"
+          } >> "$GITHUB_STEP_SUMMARY"
+          shopt -s nullglob
+          mapfile -t apks < <(find test/qksms/presentation/build/outputs/apk -name '*.apk' -type f 2>/dev/null | sort)
+          if ((${#apks[@]})); then
+            echo "| File | Size |" >> "$GITHUB_STEP_SUMMARY"
+            echo "|------|------|" >> "$GITHUB_STEP_SUMMARY"
+            for f in "${apks[@]}"; do
+              sz=$(du -h "$f" | cut -f1)
+              echo "| \`$(basename "$f")\` | $sz |" >> "$GITHUB_STEP_SUMMARY"
+            done
+          else
+            echo "_No APK files found under \`test/qksms/presentation/build/outputs/apk\` (build may have failed)._ " >> "$GITHUB_STEP_SUMMARY"
+          fi
+          {
+            echo ""
+            echo "### Artifact"
+            echo "Workflow artifact: **apix-qksms-debug-${VERSION}** (\`presentation/.../noAnalytics/debug/*.apk\`)."
+            echo ""
+            echo "### Usage"
+            echo "Install as default SMS app → drawer → **ApiX gateway** → server host/port and **Start relay**."
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload QKSMS APK artifact
         uses: actions/upload-artifact@v4
