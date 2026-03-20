@@ -20,6 +20,7 @@ node src/index.js
 
 - **UI:** `http://<host>:3000` (default `PORT=3000`)  
 - **API docs (HTML):** `http://<host>:3000/docs` → [`public/docs.html`](./public/docs.html)  
+- **API test console:** `http://<host>:3000/api-test.html` — preset requests (editable), device + `device_strategy` (`auto` spreads sends across online devices).  
 - **Health / status:** `GET /api/v1/status`
 
 **Node:** ≥ 18 (`package.json` → `engines`).
@@ -35,6 +36,7 @@ node src/index.js
 | `src/email/` | Multi-SMTP: `smtpConfig`, `smtpRouter`, limits, transport |
 | `src/db.js` | SQLite models and migrations |
 | `public/index.html` | Web console (sidebar includes link to `/docs`) |
+| `public/api-test.html` | Interactive API tester (session or `X-API-Key`) |
 | `public/docs.html` | Full API reference (examples, tables) |
 | `data/` | Default DB directory (`DB_PATH` in `.env`) |
 
@@ -52,6 +54,7 @@ See **[`.env.example`](./.env.example)** for every variable. Highlights:
 | `CORS_ORIGINS` | Comma-separated allowed Origins when locked down |
 | `USE_SSL` | `true` behind HTTPS reverse proxy (cookies / HSTS behavior) |
 | `DB_PATH` | SQLite file path |
+| `FACTORY_RESET_NO_RESTART` | `true` = do not spawn a replacement process after factory reset (use with **systemd** `Restart=always` / **pm2**) |
 | `SMTP_*` | Legacy single SMTP when **no** DB profiles exist |
 | `SMTP_MAX_PROFILES` | Cap for UI/API stored profiles (default **25**, max **100**) |
 

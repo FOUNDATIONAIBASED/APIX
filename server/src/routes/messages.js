@@ -91,6 +91,7 @@ router.post('/send', sendLimiter, async (req, res) => {
     }
 
     try {
+        const ds = req.body.device_strategy ?? req.body.deviceStrategy;
         const result = await scheduler.dispatchSms({
             to,
             from:       sanitizePhone(req.body.from),
@@ -99,6 +100,7 @@ router.post('/send', sendLimiter, async (req, res) => {
             mediaUrl:   req.body.media_url || null,
             deviceId:   req.body.device_id || null,
             templateId,
+            deviceStrategy: ds != null && String(ds).trim() !== '' ? String(ds).trim() : null,
         });
         res.status(202).json({
             success:  true,
@@ -115,7 +117,7 @@ router.post('/send', sendLimiter, async (req, res) => {
 
 // ── POST /api/v1/messages/bulk ───────────────────────────────────
 router.post('/bulk', sendLimiter, async (req, res) => {
-    const { messages, from, template_id, variables = {} } = req.body;
+    const { messages, from, template_id, variables = {}, device_strategy } = req.body;
     if (!Array.isArray(messages) || !messages.length) {
         return res.status(400).json({ error: 'messages[] required' });
     }
@@ -144,8 +146,15 @@ router.post('/bulk', sendLimiter, async (req, res) => {
 
         // Queue async to avoid blocking response
         const priority = m.priority || 5;
+        const devStrat = device_strategy != null && String(device_strategy).trim() !== ''
+            ? String(device_strategy).trim() : null;
         scheduler.enqueue(async () => {
-            try { await scheduler.dispatchSms({ to, from: sanitizePhone(from), body, type: 'sms' }); }
+            try {
+                await scheduler.dispatchSms({
+                    to, from: sanitizePhone(from), body, type: 'sms',
+                    deviceStrategy: devStrat,
+                });
+            }
             catch {}
         }, priority);
         queued.push({ to });

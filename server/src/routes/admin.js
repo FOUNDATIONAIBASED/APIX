@@ -11,6 +11,7 @@
  * POST /api/v1/admin/audit/purge        — purge old audit logs (admin)
  */
 const router = require('express').Router();
+const { spawn } = require('child_process');
 const os     = require('os');
 const path   = require('path');
 const fs     = require('fs');
@@ -81,6 +82,7 @@ router.post('/factory-reset', requireAdmin, async (req, res) => {
             'devices',
             'plans', 'roles',
             'ip_security_rules', 'device_discovery_hints', 'login_fail_counters', 'unban_challenge_tokens',
+            'smtp_send_log',
             'settings',
         ];
         db.pragma('foreign_keys = OFF');
@@ -109,10 +111,27 @@ router.post('/factory-reset', requireAdmin, async (req, res) => {
             }
         }
 
-        res.json({ success: true, message: 'Factory reset complete. Please reload.' });
+        res.json({
+            success: true,
+            message: 'Factory reset complete. Server is restarting — you will be redirected to setup.',
+        });
 
-        // Delayed process exit so response can be sent; pm2/apix.sh will restart
-        setTimeout(() => process.exit(0), 500);
+        // Parent process exits (releases HTTP port). A detached helper starts a new node after a short delay
+        // so bare `nohup` installs are not left permanently down. Skip if systemd/pm2 already restarts the service.
+        const serverRoot = path.join(__dirname, '..', '..');
+        const indexJs = path.join(__dirname, '..', 'index.js');
+        const delayScript = path.join(__dirname, '..', 'factoryRestartDelay.js');
+        if (process.env.FACTORY_RESET_NO_RESTART !== 'true' && fs.existsSync(delayScript)) {
+            try {
+                spawn(process.execPath, [delayScript, '1500', serverRoot, indexJs], {
+                    detached: true,
+                    stdio: 'ignore',
+                }).unref();
+            } catch (e) {
+                console.error('[factory-reset] Could not schedule restart:', e.message);
+            }
+        }
+        setTimeout(() => process.exit(0), 250);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

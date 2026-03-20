@@ -63,7 +63,7 @@ async function _processScheduled() {
 }
 
 // ── Core SMS dispatch (routes to connected Android device) ──────
-async function _dispatchSms({ to, from, body, type = 'sms', mediaUrl, deviceId, campaignId, templateId, numberGroupId }) {
+async function _dispatchSms({ to, from, body, type = 'sms', mediaUrl, deviceId, campaignId, templateId, numberGroupId, deviceStrategy }) {
     if (!_wsHandler) throw new Error('WS handler not initialised');
 
     const msgId = 'msg_' + uuidv4().replace(/-/g, '').slice(0, 16);
@@ -101,17 +101,26 @@ async function _dispatchSms({ to, from, body, type = 'sms', mediaUrl, deviceId, 
         const devs = Devices.findAll().filter(d => connected.includes(d.id) && d.status === 'approved');
         if (!devs.length) throw new Error('No approved devices online');
 
-        const strategy = Settings.get('private_strategy', 'round_robin');
-        if (strategy === 'random') {
+        const defaultStrat = Settings.get('private_strategy', 'round_robin');
+        const pick = deviceStrategy != null && String(deviceStrategy).trim() !== ''
+            ? String(deviceStrategy).trim().toLowerCase()
+            : defaultStrat;
+        // "auto" = spread load: pick among devices with lowest sent_today (random tie-break)
+        if (pick === 'random') {
             targetDevice = devs[Math.floor(Math.random() * devs.length)].id;
-        } else if (strategy === 'least_today') {
+        } else if (pick === 'least_today') {
             devs.sort((a, b) => (a.sent_today || 0) - (b.sent_today || 0));
             targetDevice = devs[0].id;
-        } else if (strategy === 'least_recent') {
+        } else if (pick === 'least_recent') {
             devs.sort((a, b) => new Date(a.last_seen || 0) - new Date(b.last_seen || 0));
             targetDevice = devs[0].id;
+        } else if (pick === 'auto') {
+            devs.sort((a, b) => (a.sent_today || 0) - (b.sent_today || 0));
+            const min = devs[0].sent_today || 0;
+            const tied = devs.filter(d => (d.sent_today || 0) === min);
+            targetDevice = tied[Math.floor(Math.random() * tied.length)].id;
         } else {
-            // round_robin default
+            // round_robin default — same ordering as least_today for stable rotation
             devs.sort((a, b) => (a.sent_today || 0) - (b.sent_today || 0));
             targetDevice = devs[0].id;
         }

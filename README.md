@@ -385,7 +385,7 @@ ApiX supports three access patterns:
 | API key in URL | `?api_key=` allowed | **Blocked** — use `X-API-Key` or `Authorization: Bearer` |
 | Session cookie `Secure` | Set when the request is HTTPS or `USE_SSL=true` | Same (always use HTTPS in production) |
 
-After the first-time setup wizard, `deployment_mode` is stored in the database and can be changed under **Settings** (`deployment_mode`). **Factory reset** wipes all data, users, devices, settings, and local backup files under `data/`, then the process restarts so you can run setup again.
+After the first-time setup wizard, `deployment_mode` is stored in the database and can be changed under **Settings** (`deployment_mode`). **Factory reset** wipes all data, users, devices, settings, SMTP send counters, and local backup files under `data/`, then exits; the server **starts a replacement Node process** after a short delay (so bare `nohup` installs are not left permanently down). If you use **systemd** or **pm2** with automatic restart, set **`FACTORY_RESET_NO_RESTART=true`** in `.env` to avoid two instances.
 
 ### Email & multi-SMTP (transactional)
 

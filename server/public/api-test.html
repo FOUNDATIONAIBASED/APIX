@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ApiX — API test console</title>
+<link href="https://fonts.googleapis.com/css2?family=Azeret+Mono:wght@400;500;700&family=Epilogue:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#090d1a;--bg2:#0e1525;--bd:rgba(255,255,255,.1);
+  --tx:#f0f4ff;--tx2:#8fa3c8;--tx3:#526080;
+  --c1:#3b82f6;--ok:#10b981;--err:#ef4444;
+  --fm:'Azeret Mono',monospace;--fs:'Epilogue',sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--fs);background:var(--bg);color:var(--tx);min-height:100vh;padding:20px;}
+a{color:var(--c1)}
+.wrap{max-width:1100px;margin:0 auto}
+h1{font-size:1.25rem;font-weight:800;margin:0 0 4px;letter-spacing:-.02em}
+.sub{font-size:12px;color:var(--tx2);margin-bottom:18px;line-height:1.5}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:900px){.grid{grid-template-columns:1fr}}
+.panel{background:var(--bg2);border:1px solid var(--bd);border-radius:14px;padding:16px;margin-bottom:14px}
+label{display:block;font-size:10px;font-family:var(--fm);color:var(--tx3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+input,select,textarea{width:100%;background:#131d33;border:1px solid var(--bd);border-radius:8px;padding:10px 12px;font-size:13px;font-family:var(--fm);color:var(--tx)}
+textarea{min-height:120px;resize:vertical}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.row > *{flex:1;min-width:120px}
+.btn{background:linear-gradient(135deg,var(--c1),#6366f1);border:none;border-radius:10px;padding:10px 18px;font-weight:700;color:#fff;cursor:pointer;font-family:var(--fs)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-sec{background:rgba(255,255,255,.06);border:1px solid var(--bd);color:var(--tx2)}
+.out{font-family:var(--fm);font-size:12px;background:#0a0e18;border:1px solid var(--bd);border-radius:8px;padding:12px;white-space:pre-wrap;word-break:break-word;max-height:420px;overflow:auto}
+.badge{display:inline-block;font-size:10px;padding:3px 8px;border-radius:6px;font-family:var(--fm)}
+.b-ok{background:rgba(16,185,129,.15);color:#6ee7b7}
+.b-err{background:rgba(239,68,68,.15);color:#fca5a5}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.hint{font-size:11px;color:var(--tx3);margin-top:8px;line-height:1.45}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>API test console</h1>
+  <p class="sub">Preset requests are editable. Sign in on <a href="/login">/login</a> first (session cookie), or set an <strong>API key</strong> below. For SMS, pick a <strong>sender strategy</strong> and optional <strong>device</strong> — <code>auto</code> spreads load across online devices (lowest <code>sent_today</code>, random tie-break).</p>
+
+  <div class="panel">
+    <div class="toolbar">
+      <button type="button" class="btn btn-sec" onclick="loadDevices()">Refresh devices</button>
+      <span class="hint" id="devHint">Load devices to choose a sender phone / device_id.</span>
+    </div>
+    <div class="row">
+      <div>
+        <label>API key (optional, header X-API-Key)</label>
+        <input type="password" id="apiKey" placeholder="apix_live_..." autocomplete="off">
+      </div>
+      <div>
+        <label>Device (optional — leave empty to let server pick)</label>
+        <select id="deviceSel"><option value="">— Auto / server default —</option></select>
+      </div>
+      <div>
+        <label>Sender number (optional <code>from</code>)</label>
+        <input id="fromNum" placeholder="+15551234567">
+      </div>
+      <div>
+        <label>Device strategy</label>
+        <select id="devStrat">
+          <option value="">Server default (Settings → private strategy)</option>
+          <option value="auto" selected>auto — spread across devices (recommended)</option>
+          <option value="least_today">least_today</option>
+          <option value="round_robin">round_robin</option>
+          <option value="random">random</option>
+          <option value="least_recent">least_recent</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <label>Preset</label>
+    <div class="row" style="margin-bottom:10px">
+      <select id="presetSel" style="flex:2"></select>
+      <button type="button" class="btn btn-sec" onclick="applyPreset()">Load preset</button>
+    </div>
+    <div class="grid">
+      <div>
+        <label>Method</label>
+        <select id="method"><option>GET</option><option>POST</option><option>PUT</option><option>PATCH</option><option>DELETE</option></select>
+      </div>
+      <div>
+        <label>Path (relative to this host)</label>
+        <input id="path" value="/api/v1/status" placeholder="/api/v1/...">
+      </div>
+    </div>
+    <label style="margin-top:12px">JSON body (POST/PUT/PATCH)</label>
+    <textarea id="body" spellcheck="false">{}</textarea>
+    <div class="row" style="margin-top:12px">
+      <button type="button" class="btn" id="sendBtn" onclick="sendReq()">Send request</button>
+      <button type="button" class="btn btn-sec" onclick="location.href='/'">← Dashboard</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <label>Response</label>
+    <div id="meta" style="margin-bottom:8px"></div>
+    <div class="out" id="out">—</div>
+  </div>
+</div>
+
+<script>
+const PRESETS = [
+  { name: 'GET /health', method: 'GET', path: '/health', body: '{}' },
+  { name: 'GET /api/v1/status', method: 'GET', path: '/api/v1/status', body: '{}' },
+  { name: 'GET /api/v1/devices', method: 'GET', path: '/api/v1/devices', body: '{}' },
+  { name: 'GET /api/v1/messages (last 10)', method: 'GET', path: '/api/v1/messages?limit=10', body: '{}' },
+  { name: 'POST /api/v1/messages/send (edit "to")', method: 'POST', path: '/api/v1/messages/send', body: JSON.stringify({
+    to: '+15551234567',
+    body: 'ApiX API test message',
+    from: '',
+    device_id: '',
+    device_strategy: 'auto'
+  }, null, 2) },
+  { name: 'POST /api/v1/messages/bulk (sample)', method: 'POST', path: '/api/v1/messages/bulk', body: JSON.stringify({
+    from: '',
+    device_strategy: 'auto',
+    messages: [{ to: '+15551234567', body: 'Bulk test 1' }, { to: '+15551234568', body: 'Bulk test 2' }]
+  }, null, 2) },
+];
+
+const presetSel = document.getElementById('presetSel');
+PRESETS.forEach((p, i) => {
+  const o = document.createElement('option');
+  o.value = i;
+  o.textContent = p.name;
+  presetSel.appendChild(o);
+});
+
+function applyPreset() {
+  const p = PRESETS[+presetSel.value];
+  if (!p) return;
+  document.getElementById('method').value = p.method;
+  document.getElementById('path').value = p.path;
+  document.getElementById('body').value = p.body;
+}
+
+function headers() {
+  const h = { 'Content-Type': 'application/json' };
+  const k = document.getElementById('apiKey').value.trim();
+  if (k) h['X-API-Key'] = k;
+  return h;
+}
+
+function mergeSendBody(raw) {
+  let obj;
+  try { obj = JSON.parse(raw || '{}'); } catch { obj = {}; }
+  const did = document.getElementById('deviceSel').value.trim();
+  const from = document.getElementById('fromNum').value.trim();
+  const strat = document.getElementById('devStrat').value.trim();
+  if (did) obj.device_id = did;
+  else delete obj.device_id;
+  if (from) obj.from = from;
+  else if (obj.from === '') delete obj.from;
+  if (strat) obj.device_strategy = strat;
+  else delete obj.device_strategy;
+  return JSON.stringify(obj, null, 2);
+}
+
+async function loadDevices() {
+  const hint = document.getElementById('devHint');
+  hint.textContent = 'Loading…';
+  try {
+    const r = await fetch('/api/v1/devices', { credentials: 'include', headers: headers() });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      hint.textContent = 'Could not load devices (' + r.status + '). Sign in or set API key.';
+      return;
+    }
+    const sel = document.getElementById('deviceSel');
+    sel.innerHTML = '<option value="">— Auto / server default —</option>';
+    for (const d of (j.devices || [])) {
+      const sim = (d.sims && d.sims[0] && d.sims[0].number) ? d.sims[0].number : 'no SIM';
+      const lab = `${d.name || d.id} · ${sim} ${d.connected ? '🟢' : '⚪'}`;
+      const o = document.createElement('option');
+      o.value = d.id;
+      o.textContent = lab;
+      sel.appendChild(o);
+    }
+    hint.textContent = `Loaded ${(j.devices || []).length} device(s).`;
+  } catch (e) {
+    hint.textContent = 'Error: ' + e.message;
+  }
+}
+
+async function sendReq() {
+  const btn = document.getElementById('sendBtn');
+  const out = document.getElementById('out');
+  const meta = document.getElementById('meta');
+  btn.disabled = true;
+  const method = document.getElementById('method').value;
+  let path = document.getElementById('path').value.trim() || '/';
+  if (!path.startsWith('/')) path = '/' + path;
+  let body = document.getElementById('body').value;
+  if (path.includes('/messages/send') || path.includes('/messages/bulk')) {
+    body = mergeSendBody(body);
+    document.getElementById('body').value = body;
+  }
+  const url = location.origin + path;
+  const opts = { method, credentials: 'include', headers: headers() };
+  if (['POST', 'PUT', 'PATCH'].includes(method) && body.trim()) {
+    opts.body = body;
+  }
+  const t0 = performance.now();
+  try {
+    const r = await fetch(url, opts);
+    const text = await r.text();
+    const ms = Math.round(performance.now() - t0);
+    const badge = r.ok ? '<span class="badge b-ok">' + r.status + '</span>' : '<span class="badge b-err">' + r.status + '</span>';
+    meta.innerHTML = badge + ' <span style="color:var(--tx3);font-family:var(--fm);font-size:11px;">' + ms + ' ms · ' + method + ' ' + path + '</span>';
+    try {
+      out.textContent = JSON.stringify(JSON.parse(text), null, 2);
+    } catch {
+      out.textContent = text;
+    }
+  } catch (e) {
+    meta.innerHTML = '<span class="badge b-err">ERR</span>';
+    out.textContent = String(e);
+  }
+  btn.disabled = false;
+}
+
+applyPreset();
+</script>
+</body>
+</html>
