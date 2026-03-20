@@ -447,6 +447,7 @@ action_status() {
     echo -e "    Config file : ${D}$ENV_FILE${N}"
     echo -e "    Log file    : ${D}$LOG_FILE${N}"
     echo -e "    Data dir    : ${D}$SCRIPT_DIR/data/${N}"
+    echo -e "    Safe-update : ${D}$SCRIPT_DIR/.apix-backups/updates/${N} (see option 10)"
 
     if [[ -f "$SCRIPT_DIR/data/apix.db" ]]; then
         local db_size; db_size=$(du -h "$SCRIPT_DIR/data/apix.db" 2>/dev/null | cut -f1)
@@ -608,10 +609,17 @@ action_uninstall() {
     sep
     echo ""
     warn "This will stop the server and remove all installed npm packages."
-    warn "Your .env and database files will be kept."
+    warn "By default your .env and database under data/ are kept."
+    echo ""
+    echo -e "  ${D}Optional cleanup (safe-update backups, logs):${N}"
+    echo -e "    ${D}• $SCRIPT_DIR/.apix-backups/${N}  (git update snapshots + logs)"
+    echo -e "    ${D}• $SCRIPT_DIR/logs/${N}"
     echo ""
     read -rp "  Continue? Type 'yes' to confirm: " confirm
     [[ "${confirm,,}" != "yes" ]] && { info "Cancelled."; pause; return; }
+
+    local remove_extras=""
+    read -rp "  Also remove .apix-backups/ and logs/? Type 'yes': " remove_extras
 
     # Stop server
     if is_running; then
@@ -619,6 +627,11 @@ action_uninstall() {
         kill "$(cat "$PID_FILE")" 2>/dev/null || true
         sleep 1
         rm -f "$PID_FILE"
+    fi
+
+    if systemctl is-active --quiet apix-gateway 2>/dev/null; then
+        info "Stopping systemd apix-gateway..."
+        sudo systemctl stop apix-gateway 2>/dev/null || true
     fi
 
     # Remove systemd service if exists
@@ -637,9 +650,48 @@ action_uninstall() {
         ok "node_modules removed"
     fi
 
+    if [[ "${remove_extras,,}" == "yes" ]]; then
+        [[ -d "$SCRIPT_DIR/.apix-backups" ]] && { rm -rf "$SCRIPT_DIR/.apix-backups"; ok "Removed .apix-backups/"; }
+        [[ -d "$SCRIPT_DIR/logs" ]] && { rm -rf "$SCRIPT_DIR/logs"; ok "Removed logs/"; }
+    fi
+
     ok "Uninstall complete."
     echo -e "  ${D}Config kept: $ENV_FILE${N}"
-    echo -e "  ${D}Data kept  : $SCRIPT_DIR/data/${N}"
+    echo -e "  ${D}Data kept  : $SCRIPT_DIR/data/${N} (unless you delete it manually)"
+    pause
+}
+
+# ── 10. Safe update (Git + backup + auto-revert) ──────────────
+action_update() {
+    header
+    echo -e "  ${W}Safe update from GitHub${N}"
+    sep
+    echo ""
+    info "This runs ${D}scripts/apix-update.sh${N} which will:"
+    echo "    1) Stop the server (systemd apix-gateway, or .apix.pid / port from .env)"
+    echo "    2) Backup SQLite data → ${D}$SCRIPT_DIR/.apix-backups/updates/<timestamp>/${N}"
+    echo "    3) ${D}git pull --ff-only${N} on the repository root (parent of server/)"
+    echo "    4) ${D}npm install${N} + ${D}node --check src/index.js${N}"
+    echo "    5) On failure: restore previous commit + data; errors in ${D}update-error.log${N}"
+    echo ""
+    warn "Requires a Git clone (e.g. https://github.com/FOUNDATIONAIBASED/APIX)."
+    warn "Set branch: ${D}export APIX_GIT_BRANCH=main${N} (default)"
+    echo ""
+    read -rp "  Type UPDATE to continue: " confirm
+    if [[ "$confirm" != "UPDATE" ]]; then
+        info "Cancelled."
+        pause
+        return
+    fi
+
+    local upd="$SCRIPT_DIR/scripts/apix-update.sh"
+    if [[ ! -f "$upd" ]]; then
+        err "Update script not found: $upd"
+        pause
+        return
+    fi
+    chmod +x "$upd" 2>/dev/null || true
+    bash "$upd"
     pause
 }
 
@@ -667,11 +719,12 @@ main_menu() {
         echo -e "  ${W}7${N}  Configure"
         echo -e "  ${W}8${N}  Install as systemd service (auto-start on boot)"
         echo -e "  ${W}9${N}  Uninstall"
+        echo -e "  ${W}10${N} ${Y}Safe update${N} (Git backup + revert on error)"
         echo -e "  ${W}0${N}  Exit"
         echo ""
         sep
         echo ""
-        read -rp "  Choose an option [0-9]: " choice
+        read -rp "  Choose an option [0-10]: " choice
         echo ""
 
         case "$choice" in
@@ -684,6 +737,7 @@ main_menu() {
             7) action_configure ;;
             8) action_install_service ;;
             9) action_uninstall ;;
+            10) action_update ;;
             0) echo -e "  ${D}Goodbye.${N}"; echo ""; exit 0 ;;
             *) warn "Invalid option: $choice" ; sleep 1 ;;
         esac

@@ -15,14 +15,35 @@ const bcrypt  = require('bcryptjs');
 const crypto  = require('crypto');
 const { v4: uuidv4 } = require('uuid');
 const cfg         = require('../config');
-const { Users, Sessions, Plans, ApiKeys, PasswordResets, AuditLog } = require('../db');
+const { sessionCookieOpts, clearSessionCookieOpts } = require('../cookies');
+const { Users, Sessions, Plans, ApiKeys, PasswordResets, AuditLog, Settings, IpSecurity, UnbanChallenges } = require('../db');
 const { requireAuth } = require('../auth/middleware');
 const mailer  = require('../email/mailer');
+const fail2ban = require('../security/fail2banService');
 
 const SALT_ROUNDS = 12;
 const COLORS = ['#3b82f6','#8b5cf6','#10b981','#f59e0b','#ef4444','#06b6d4','#ec4899'];
 
 function randColor() { return COLORS[Math.floor(Math.random() * COLORS.length)]; }
+
+// ── Unblock IP (email link after fail2ban) — public ────────────
+router.get('/unban-challenge', (req, res) => {
+    const token = req.query.token;
+    if (!token || typeof token !== 'string') {
+        return res.status(400).type('html').send('<h1>Invalid link</h1><p>Missing token.</p>');
+    }
+    const row = UnbanChallenges.consume(token);
+    if (!row) {
+        return res.status(400).type('html').send('<h1>Link expired</h1><p>This unban link is invalid or was already used.</p>');
+    }
+    IpSecurity.liftBanForIp(row.ip);
+    res.type('html').send(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>IP unblocked</title></head>
+<body style="font-family:system-ui,sans-serif;padding:40px;max-width:560px;background:#0b0e18;color:#e1e8f5;">
+<h1 style="color:#22d3ee;">IP unblocked</h1>
+<p>The address <code style="background:#131a2c;padding:2px 8px;border-radius:6px;">${row.ip}</code> may sign in again.</p>
+<p><a href="/login" style="color:#3b82f6;">Go to login →</a></p>
+</body></html>`);
+});
 
 // ── Setup check (public) ─────────────────────────────────────
 router.get('/setup-status', (req, res) => {
@@ -36,7 +57,7 @@ router.post('/setup', async (req, res) => {
     if (!cfg.allowInitialSetup) return res.status(403).json({ error: 'Initial setup is disabled' });
     if (Users.count() > 0) return res.status(409).json({ error: 'Setup already completed' });
 
-    const { username, password, email, display_name } = req.body;
+    const { username, password, email, display_name, deployment_mode } = req.body;
     if (!username || !password) return res.status(400).json({ error: 'username and password required' });
     if (username.length < 3) return res.status(400).json({ error: 'Username must be at least 3 characters' });
     if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
@@ -58,9 +79,13 @@ router.post('/setup', async (req, res) => {
         avatar_color:  randColor(),
     });
 
+    const mode = String(deployment_mode || 'homelab').toLowerCase() === 'production' ? 'production' : 'homelab';
+    Settings.set('deployment_mode', mode);
+
     const token = Sessions.create(id, req.ip, req.headers['user-agent']);
+    fail2ban.onLoginSuccess(req);
     res
-        .cookie('apix_session', token, { httpOnly: true, sameSite: 'Lax', maxAge: 30 * 86_400_000 })
+        .cookie('apix_session', token, sessionCookieOpts(req))
         .json({ success: true, token, user: { id, username, role: 'admin', display_name: display_name || username } });
 });
 
@@ -72,6 +97,7 @@ router.post('/login', async (req, res) => {
     const user = Users.findByUsername(username) || Users.findByEmail(username);
     if (!user) {
         AuditLog.log({ username, action: 'auth.login_failed', ip: req.ip, result: 'fail', details: { reason: 'user not found' } });
+        await fail2ban.onLoginFailure(req, username);
         return res.status(401).json({ error: 'Invalid credentials' });
     }
     if (user.status === 'suspended') return res.status(403).json({ error: 'Account suspended' });
@@ -79,6 +105,7 @@ router.post('/login', async (req, res) => {
     const ok = await bcrypt.compare(password, user.password_hash);
     if (!ok) {
         AuditLog.log({ user_id: user.id, username: user.username, action: 'auth.login_failed', ip: req.ip, result: 'fail', details: { reason: 'bad password' } });
+        await fail2ban.onLoginFailure(req, user.username);
         return res.status(401).json({ error: 'Invalid credentials' });
     }
 
@@ -92,11 +119,12 @@ router.post('/login', async (req, res) => {
 
     Users.recordLogin(user.id, req.ip);
     const token = Sessions.create(user.id, req.ip, req.headers['user-agent']);
+    fail2ban.onLoginSuccess(req);
     const plan = user.plan_id ? Plans.findById(user.plan_id) : Plans.getDefault();
     AuditLog.log({ user_id: user.id, username: user.username, action: 'auth.login_ok', ip: req.ip });
 
     res
-        .cookie('apix_session', token, { httpOnly: true, sameSite: 'Lax', maxAge: 30 * 86_400_000 })
+        .cookie('apix_session', token, sessionCookieOpts(req))
         .json({
             success: true,
             token,
@@ -119,7 +147,7 @@ router.post('/login', async (req, res) => {
 router.post('/logout', requireAuth(), (req, res) => {
     const { getToken } = require('../auth/middleware');
     Sessions.delete(getToken(req));
-    res.clearCookie('apix_session').json({ success: true });
+    res.clearCookie('apix_session', clearSessionCookieOpts(req)).json({ success: true });
 });
 
 // ── Current user ──────────────────────────────────────────────
@@ -169,7 +197,7 @@ router.post('/change-password', requireAuth(), async (req, res) => {
     // Invalidate all other sessions
     Sessions.deleteAllForUser(user.id);
     const newToken = Sessions.create(user.id, req.ip, req.headers['user-agent']);
-    res.cookie('apix_session', newToken, { httpOnly: true, sameSite: 'Lax', maxAge: 30 * 86_400_000 })
+    res.cookie('apix_session', newToken, sessionCookieOpts(req))
         .json({ success: true, token: newToken });
 });
 
@@ -221,10 +249,22 @@ router.get('/reset-password', (req, res) => {
     res.json({ valid: true, username: row.username });
 });
 
-// ── SMTP test (admin) ─────────────────────────────────────────
+// ── SMTP test (admin) — all profiles or ?profile_id= ───────────
 router.post('/smtp-test', requireAuth('admin'), async (req, res) => {
-    const result = await mailer.testConnection();
-    res.json(result);
+    const smtpConfig = require('../email/smtpConfig');
+    const smtpRouter = require('../email/smtpRouter');
+    const id = req.body?.profile_id;
+    const all = smtpConfig.getEffectiveProfiles();
+    const targets = id ? all.filter(p => p.id === id) : all;
+    if (!targets.length) return res.json({ ok: false, reason: 'SMTP not configured', results: [] });
+    const results = [];
+    for (const p of targets) results.push(await smtpRouter.testProfile(p));
+    const ok = results.every(r => r.ok);
+    res.json({
+        ok,
+        reason: ok ? undefined : results.find(r => !r.ok)?.reason,
+        results,
+    });
 });
 
 // ── Theme preference ──────────────────────────────────────────

@@ -44,6 +44,7 @@ class SettingsFragment : Fragment() {
         binding.tvConnectedServer.text       = serverDisplay
         binding.switchBootStart.isChecked    = prefs.startOnBoot
         binding.switchMms.isChecked          = prefs.mmsEnabled
+        binding.switchDebugUiLogs.isChecked  = prefs.debugUiLogs
         binding.etWsPing.setText(prefs.wsPingIntervalSeconds.toString())
         binding.etHeartbeat.setText(prefs.heartbeatIntervalSeconds.toString())
         binding.tvVersion.text               = BuildConfig.VERSION_NAME
@@ -57,6 +58,10 @@ class SettingsFragment : Fragment() {
 
         binding.switchMms.setOnCheckedChangeListener { _, checked ->
             prefs.mmsEnabled = checked
+        }
+
+        binding.switchDebugUiLogs.setOnCheckedChangeListener { _, checked ->
+            prefs.debugUiLogs = checked
         }
 
         binding.btnDisconnect.setOnClickListener {

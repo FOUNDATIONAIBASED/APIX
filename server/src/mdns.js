@@ -43,4 +43,35 @@ function stopMdns() {
     }
 }
 
-module.exports = { startMdns, stopMdns };
+/**
+ * Discover other _apix._tcp services on the LAN (separate instances / test gateways).
+ */
+function browseApixOnLan(timeoutMs = 4000) {
+    return new Promise((resolve) => {
+        let b;
+        try {
+            const { Bonjour } = require('bonjour-service');
+            b = new Bonjour();
+        } catch (e) {
+            return resolve([]);
+        }
+        const out = [];
+        const browser = b.find({ type: 'apix', protocol: 'tcp' });
+        browser.on('up', (s) => {
+            out.push({
+                name: s.name,
+                host: s.host,
+                port: s.port,
+                addresses: s.addresses || [],
+                txt: s.txt || {},
+            });
+        });
+        setTimeout(() => {
+            try { browser.stop(); } catch (_) {}
+            try { b.destroy(); } catch (_) {}
+            resolve(out);
+        }, timeoutMs);
+    });
+}
+
+module.exports = { startMdns, stopMdns, browseApixOnLan };

@@ -1,15 +1,24 @@
 'use strict';
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const router  = express.Router();
 const crypto  = require('crypto');
 const os      = require('os');
-const { Devices, PairingTokens } = require('../db');
+const { Devices, PairingTokens, DiscoveryHints } = require('../db');
 const { getConnectedDeviceIds }  = require('../ws/handler');
 const { requirePerm, requireAnyRole } = require('../auth/middleware');
 const cfg = require('../config');
 
 // Shorthand: must have devices:manage perm (admin or mod)
 const canManage = requirePerm('devices:manage');
+
+const announceLimiter = rateLimit({
+    windowMs: 60_000,
+    max: 60,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many announce requests from this IP', code: 'ANNOUNCE_RATE_LIMIT' },
+});
 
 // GET /api/v1/devices  — requires at least devices:view
 router.get('/', requirePerm('devices:view'), (req, res) => {
@@ -40,6 +49,18 @@ router.get('/pair', canManage, (req, res) => {
 
     const payload = { v: 2, urls, token, name: cfg.mdnsName || 'ApiX Gateway', port: cfg.port };
     res.json({ payload, qr_data: JSON.stringify(payload), expires_in: 600 });
+});
+
+// POST /api/v1/devices/announce — public: client tells server it will connect (for admin discovery UI)
+router.post('/announce', announceLimiter, (req, res) => {
+    const { ws_host, ws_port, android_model } = req.body || {};
+    DiscoveryHints.upsert({
+        client_ip: req.ip,
+        ws_host: ws_host || null,
+        ws_port: ws_port != null ? parseInt(ws_port, 10) : null,
+        android_model: android_model || null,
+    });
+    res.json({ success: true });
 });
 
 // POST /api/v1/devices/verify-token  — public (Android uses this)

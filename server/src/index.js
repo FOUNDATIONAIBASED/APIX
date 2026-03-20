@@ -3,7 +3,6 @@ require('dotenv').config();
 
 const http        = require('http');
 const express     = require('express');
-const cors        = require('cors');
 const cookieParser = require('cookie-parser');
 const { WebSocketServer } = require('ws');
 const EventEmitter        = require('events');
@@ -47,14 +46,13 @@ emitter.setMaxListeners(100);
 // Trust proxy headers (needed for rate-limiting behind nginx/caddy)
 if (cfg.trustedProxies > 0) app.set('trust proxy', cfg.trustedProxies);
 
+const { ipFirewallMiddleware } = require('./middleware/ipFirewall');
+app.use(ipFirewallMiddleware);
+
 // ── Security middleware ───────────────────────────────────────
 app.use(security.helmetMiddleware);
 app.use(security.globalLimiter);
-app.use(cors({
-    origin: true,
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-}));
+app.use(security.corsMiddleware);
 app.use(cookieParser());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
@@ -99,12 +97,14 @@ app.use('/api/v1/settings',   publicApiAuth, require('./routes/settings'));
 
 // ── Auth + account system (public + authenticated) ────────────
 app.use('/api/auth',              require('./routes/auth'));
+app.use('/api/auth/email-smtp',   require('./routes/emailSmtpAdmin'));
 app.use('/api/auth/2fa',          require('./routes/totp'));
 app.use('/api/v1/plans',          require('./routes/plans'));
 app.use('/api/v1/accounts',       require('./routes/accounts'));
 app.use('/api/v1/roles',          require('./routes/roles'));
 app.use('/api/v1/backup',         require('./routes/backup'));
 app.use('/api/v1/admin',          require('./routes/admin'));
+app.use('/api/v1/admin/security', require('./routes/securityAdmin'));
 app.use('/api/v1/keyword-rules',  require('./routes/keyword-rules'));
 app.use('/api/v1/drip',           publicApiAuth, require('./routes/drip'));
 
@@ -112,6 +112,7 @@ app.use('/api/v1/drip',           publicApiAuth, require('./routes/drip'));
 app.get('/plans',          (_req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'plans.html')));
 app.get('/login',          (_req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'login.html')));
 app.get('/reset-password', (_req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'reset-password.html')));
+app.get('/security.html', (_req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'security.html')));
 
 // ── Conversations ─────────────────────────────────────────────
 app.get('/api/v1/conversations', publicApiAuth, (req, res) => {
@@ -147,6 +148,9 @@ app.get('/api/v1/status', (req, res) => {
     const campStats = Campaigns.stats();
     const { LLM }   = require('./db');
     const llms      = LLM.findEnabled();
+    const smtpConfig = require('./email/smtpConfig');
+    const profiles = smtpConfig.getEffectiveProfiles();
+    const primary = profiles[0];
     res.json({
         status:   'ok',
         uptime:   process.uptime(),
@@ -161,12 +165,16 @@ app.get('/api/v1/status', (req, res) => {
             pending:  devices.filter(d => d.status === 'pending').length,
             approved: devices.filter(d => d.status === 'approved').length,
         },
-        // SMTP config (no credentials exposed)
-        smtp_configured: !!process.env.SMTP_HOST,
-        smtp_host: process.env.SMTP_HOST || null,
-        smtp_port: process.env.SMTP_PORT || null,
-        smtp_from: process.env.SMTP_FROM || null,
-        smtp_user: process.env.SMTP_USER ? process.env.SMTP_USER.replace(/(?<=.).(?=[^@]*@)/g, '*') : null,
+        // SMTP summary (no credentials)
+        smtp_configured: profiles.length > 0,
+        smtp_profile_count: profiles.length,
+        smtp_routing_mode: smtpConfig.getRoutingMode(),
+        smtp_host: primary?.host || process.env.SMTP_HOST || null,
+        smtp_port: primary ? String(primary.port) : (process.env.SMTP_PORT || null),
+        smtp_from: primary?.from || process.env.SMTP_FROM || null,
+        smtp_user: primary?.user
+            ? primary.user.replace(/(?<=.).(?=[^@]*@)/g, '*')
+            : (process.env.SMTP_USER ? process.env.SMTP_USER.replace(/(?<=.).(?=[^@]*@)/g, '*') : null),
     });
 });
 

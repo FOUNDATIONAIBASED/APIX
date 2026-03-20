@@ -531,6 +531,45 @@ function migrate(db) {
             PRIMARY KEY (user_id, date)
         );
 
+        CREATE TABLE IF NOT EXISTS ip_security_rules (
+            id          TEXT PRIMARY KEY,
+            cidr        TEXT NOT NULL,
+            mode        TEXT NOT NULL CHECK(mode IN ('allow','block')),
+            note        TEXT,
+            source      TEXT NOT NULL DEFAULT 'manual' CHECK(source IN ('manual','fail2ban','github')),
+            created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+            expires_at  TEXT,
+            created_by  TEXT REFERENCES users(id) ON DELETE SET NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_ip_rules_mode ON ip_security_rules(mode);
+
+        CREATE TABLE IF NOT EXISTS device_discovery_hints (
+            id            TEXT PRIMARY KEY,
+            client_ip     TEXT NOT NULL,
+            ws_host       TEXT,
+            ws_port       INTEGER,
+            android_model TEXT,
+            last_seen     TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        CREATE INDEX IF NOT EXISTS idx_discovery_hints_seen ON device_discovery_hints(last_seen DESC);
+
+        CREATE TABLE IF NOT EXISTS login_fail_counters (
+            ip           TEXT PRIMARY KEY,
+            fail_count   INTEGER NOT NULL DEFAULT 0,
+            window_start TEXT NOT NULL,
+            last_fail_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+
+        CREATE TABLE IF NOT EXISTS unban_challenge_tokens (
+            id          TEXT PRIMARY KEY,
+            token_hash  TEXT NOT NULL UNIQUE,
+            ip          TEXT NOT NULL,
+            user_id     TEXT REFERENCES users(id) ON DELETE SET NULL,
+            expires_at  TEXT NOT NULL,
+            used_at     TEXT,
+            created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+
         -- Link api_keys to users
     `);
 
@@ -591,6 +630,15 @@ function migrate(db) {
     for (const sql of alterCols) {
         try { db.exec(sql); } catch { /* column already exists */ }
     }
+
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS smtp_send_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            profile_id TEXT NOT NULL,
+            sent_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_smtp_send_profile_time ON smtp_send_log(profile_id, sent_at);
+    `);
 }
 
 // ── Device helpers ─────────────────────────────────────────────
@@ -1516,6 +1564,191 @@ const Sessions = {
     findForUser: (userId) => getDb().prepare("SELECT token,ip,user_agent,created_at,expires_at,label FROM user_sessions WHERE user_id=? AND expires_at > datetime('now') ORDER BY created_at DESC").all(userId),
     findAll: (limit=100) => getDb().prepare("SELECT s.*,u.username,u.display_name FROM user_sessions s JOIN users u ON s.user_id=u.id WHERE s.expires_at > datetime('now') ORDER BY s.created_at DESC LIMIT ?").all(limit),
     updateLabel: (token, label) => getDb().prepare('UPDATE user_sessions SET label=? WHERE token=?').run(label, token),
+    deleteAllForIp: (ip) => getDb().prepare('DELETE FROM user_sessions WHERE ip=?').run(ip),
+};
+
+// ── IP security rules (allow / block) ───────────────────────────
+function _normalizeClientIp(ip) {
+    if (!ip) return '';
+    let s = String(ip).replace(/^::ffff:/i, '');
+    if (s.startsWith('[') && s.includes(']')) s = s.slice(1, s.indexOf(']'));
+    return s;
+}
+
+function _ipMatchesCidr(ip, cidr) {
+    const norm = _normalizeClientIp(ip);
+    const c = String(cidr).trim();
+    if (!norm || !c) return false;
+    if (!c.includes('/')) return norm === c || norm === _normalizeClientIp(c);
+    try {
+        const [range, bits] = c.split('/');
+        const mask = ~(0xffffffff >>> parseInt(bits, 10));
+        const ipInt = norm.split('.').reduce((a, b) => (a << 8) | parseInt(b, 10), 0) >>> 0;
+        const rangeInt = range.split('.').reduce((a, b) => (a << 8) | parseInt(b, 10), 0) >>> 0;
+        return (ipInt & mask) === (rangeInt & mask);
+    } catch {
+        return false;
+    }
+}
+
+function _ipMatchesRule(ip, cidr) {
+    const norm = _normalizeClientIp(ip);
+    const c = String(cidr).trim();
+    if (norm && norm === c) return true;
+    if (c.includes('/') && /^\d+\.\d+\.\d+\.\d+/.test(norm)) return _ipMatchesCidr(norm, c);
+    return false;
+}
+
+const IpSecurity = {
+    normalizeIp: _normalizeClientIp,
+    listRules: () => getDb().prepare(`
+        SELECT * FROM ip_security_rules
+        WHERE expires_at IS NULL OR expires_at > datetime('now')
+        ORDER BY created_at DESC
+    `).all(),
+    addRule: ({ cidr, mode, note, source = 'manual', expires_at = null, created_by = null }) => {
+        const id = 'ipr_' + require('crypto').randomBytes(8).toString('hex');
+        getDb().prepare(`
+            INSERT INTO ip_security_rules (id,cidr,mode,note,source,expires_at,created_by)
+            VALUES (?,?,?,?,?,?,?)
+        `).run(id, String(cidr).trim(), mode, note || null, source, expires_at, created_by);
+        return id;
+    },
+    deleteRule: (id) => getDb().prepare('DELETE FROM ip_security_rules WHERE id=?').run(id),
+    /** Remove auto-blocks for this IP (fail2ban + matching single-IP blocks). */
+    liftBanForIp: (ip) => {
+        const norm = _normalizeClientIp(ip);
+        const db = getDb();
+        db.prepare(`DELETE FROM ip_security_rules WHERE mode='block' AND source='fail2ban' AND cidr=?`).run(norm);
+        if (norm && !norm.includes(':')) {
+            db.prepare(`DELETE FROM ip_security_rules WHERE mode='block' AND source='fail2ban' AND cidr=?`).run(`${norm}/32`);
+        }
+        db.prepare(`DELETE FROM login_fail_counters WHERE ip=?`).run(norm);
+    },
+    evaluate: (ip) => {
+        const norm = _normalizeClientIp(ip);
+        const rows = getDb().prepare(`
+            SELECT cidr, mode FROM ip_security_rules
+            WHERE expires_at IS NULL OR expires_at > datetime('now')
+        `).all();
+        let allowed = false;
+        let blocked = false;
+        for (const r of rows) {
+            if (_ipMatchesRule(norm, r.cidr)) {
+                if (r.mode === 'allow') allowed = true;
+                if (r.mode === 'block') blocked = true;
+            }
+        }
+        if (allowed) return 'allow';
+        if (blocked) return 'block';
+        return 'neutral';
+    },
+    listBlockedIpsLines: () => {
+        const rows = getDb().prepare(`
+            SELECT cidr FROM ip_security_rules
+            WHERE mode='block' AND (expires_at IS NULL OR expires_at > datetime('now'))
+            ORDER BY cidr
+        `).all();
+        return rows.map((r) => r.cidr);
+    },
+};
+
+const DiscoveryHints = {
+    upsert: ({ client_ip, ws_host, ws_port, android_model }) => {
+        const norm = _normalizeClientIp(client_ip);
+        const db = getDb();
+        const existing = db.prepare('SELECT id FROM device_discovery_hints WHERE client_ip=?').get(norm);
+        if (existing) {
+            db.prepare(`
+                UPDATE device_discovery_hints
+                SET ws_host=?, ws_port=?, android_model=?, last_seen=datetime('now')
+                WHERE client_ip=?
+            `).run(ws_host || null, ws_port ?? null, android_model || null, norm);
+            return existing.id;
+        }
+        const id = 'dh_' + require('crypto').randomBytes(8).toString('hex');
+        db.prepare(`
+            INSERT INTO device_discovery_hints (id,client_ip,ws_host,ws_port,android_model)
+            VALUES (?,?,?,?,?)
+        `).run(id, norm, ws_host || null, ws_port ?? null, android_model || null);
+        return id;
+    },
+    findAll: (limit = 100) => getDb().prepare(`
+        SELECT * FROM device_discovery_hints ORDER BY last_seen DESC LIMIT ?
+    `).all(limit),
+    clear: () => getDb().prepare('DELETE FROM device_discovery_hints').run(),
+};
+
+const LoginFailCounters = {
+    recordOrIncrement: (ip, windowMinutes) => {
+        const norm = _normalizeClientIp(ip);
+        const db = getDb();
+        const row = db.prepare('SELECT * FROM login_fail_counters WHERE ip=?').get(norm);
+        const now = Date.now();
+        const nowIso = new Date(now).toISOString();
+        if (!row) {
+            db.prepare(`INSERT INTO login_fail_counters (ip,fail_count,window_start,last_fail_at) VALUES (?,?,?,?)`)
+                .run(norm, 1, nowIso, nowIso);
+            return 1;
+        }
+        const start = new Date(row.window_start).getTime();
+        if (now - start > windowMinutes * 60_000) {
+            db.prepare(`UPDATE login_fail_counters SET fail_count=1, window_start=?, last_fail_at=? WHERE ip=?`)
+                .run(nowIso, nowIso, norm);
+            return 1;
+        }
+        db.prepare(`UPDATE login_fail_counters SET fail_count=fail_count+1, last_fail_at=? WHERE ip=?`).run(nowIso, norm);
+        return row.fail_count + 1;
+    },
+    get: (ip) => getDb().prepare('SELECT * FROM login_fail_counters WHERE ip=?').get(_normalizeClientIp(ip)),
+    clear: (ip) => getDb().prepare('DELETE FROM login_fail_counters WHERE ip=?').run(_normalizeClientIp(ip)),
+};
+
+/** Per-SMTP-profile send events for quota windows (UTC calendar buckets). */
+const SmtpSendLog = {
+    record: (profileId) => {
+        const db = getDb();
+        const iso = new Date().toISOString();
+        db.prepare(`INSERT INTO smtp_send_log (profile_id, sent_at) VALUES (?, ?)`).run(String(profileId), iso);
+        // Keep table bounded (~45 days of rows is plenty for quotas)
+        try {
+            const cutoff = new Date(Date.now() - 45 * 864e5).toISOString();
+            db.prepare(`DELETE FROM smtp_send_log WHERE sent_at < ?`).run(cutoff);
+        } catch (_) { /* ignore */ }
+    },
+    countSince: (profileId, isoSince) => {
+        const row = getDb().prepare(`
+            SELECT COUNT(*) AS c FROM smtp_send_log
+            WHERE profile_id = ? AND sent_at >= ?
+        `).get(String(profileId), isoSince);
+        return row ? row.c : 0;
+    },
+};
+
+const UnbanChallenges = {
+    create: (plainToken, ip, userId, hoursValid = 48) => {
+        const crypto = require('crypto');
+        const hash = crypto.createHash('sha256').update(plainToken).digest('hex');
+        const id = 'ubc_' + crypto.randomBytes(8).toString('hex');
+        const expires = new Date(Date.now() + hoursValid * 3600_000).toISOString();
+        getDb().prepare(`
+            INSERT INTO unban_challenge_tokens (id,token_hash,ip,user_id,expires_at)
+            VALUES (?,?,?,?,?)
+        `).run(id, hash, _normalizeClientIp(ip), userId || null, expires);
+        return id;
+    },
+    consume: (plainToken) => {
+        const crypto = require('crypto');
+        const hash = crypto.createHash('sha256').update(plainToken).digest('hex');
+        const db = getDb();
+        const row = db.prepare(`
+            SELECT * FROM unban_challenge_tokens
+            WHERE token_hash=? AND used_at IS NULL AND expires_at > datetime('now')
+        `).get(hash);
+        if (!row) return null;
+        db.prepare(`UPDATE unban_challenge_tokens SET used_at=datetime('now') WHERE id=?`).run(row.id);
+        return row;
+    },
 };
 
 module.exports = {
@@ -1528,4 +1761,5 @@ module.exports = {
     Plans, Users, Sessions, PasswordResets, Roles,
     BackupDestinations, BackupJobs, BackupSchedules,
     AuditLog, KeywordRules, DripSequences,
+    IpSecurity, DiscoveryHints, LoginFailCounters, UnbanChallenges, SmtpSendLog,
 };

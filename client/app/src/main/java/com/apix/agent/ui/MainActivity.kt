@@ -38,10 +38,16 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(binding.root)
 
         prefs = PreferenceManager(this)
+        if (!prefs.isServerConfigured()) {
+            startActivity(Intent(this, DiscoverActivity::class.java))
+            finish()
+            return
+        }
+
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
         setupFragments()
         setupBottomNav()

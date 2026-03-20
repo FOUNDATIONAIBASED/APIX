@@ -21,33 +21,22 @@ permissions:
   contents: write
 
 jobs:
-  build:
-    name: Build APK
+  # ── ApiX Agent (standalone client) — JDK 17 + modern Gradle ─────────────
+  build-client:
+    name: Build ApiX Agent APK
     runs-on: ubuntu-latest
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      version_code: ${{ steps.version.outputs.version_code }}
 
     steps:
-      # ── 1. Checkout ──────────────────────────────────────────────
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0   # Need full history for version calculation
+          fetch-depth: 0
 
-      # ── 2. Set up JDK 17 ─────────────────────────────────────────
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-
-      # ── 3. Set up Gradle ──────────────────────────────────────────
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: wrapper
-
-      # ── 4. Extract version from tag ───────────────────────────────
       - name: Extract version info
         id: version
         run: |
@@ -57,22 +46,30 @@ jobs:
             VERSION="dev-$(git rev-parse --short HEAD)"
           fi
           VERSION_CODE=$(git rev-list --count HEAD)
-          echo "version=${VERSION}"        >> $GITHUB_OUTPUT
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "version_code=${VERSION_CODE}" >> $GITHUB_OUTPUT
           echo "Building version: ${VERSION} (code: ${VERSION_CODE})"
 
-      # ── 5. Make Gradle wrapper executable ─────────────────────────
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: wrapper
+
       - name: Grant execute permission to gradlew
         working-directory: client
         run: chmod +x gradlew
 
-      # ── 6. Run unit tests ─────────────────────────────────────────
       - name: Run unit tests
         working-directory: client
         run: ./gradlew test --no-daemon --stacktrace
         continue-on-error: true
 
-      # ── 7. Build debug APK (always) ───────────────────────────────
       - name: Build debug APK
         working-directory: client
         run: |
@@ -80,7 +77,6 @@ jobs:
             -Pandroid.versionName="${{ steps.version.outputs.version }}" \
             -Pandroid.versionCode="${{ steps.version.outputs.version_code }}"
 
-      # ── 8. Build release APK (if signing key is configured) ───────
       - name: Build release APK
         working-directory: client
         if: env.KEYSTORE_BASE64 != ''
@@ -90,10 +86,7 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          # Decode keystore
           echo "$KEYSTORE_BASE64" | base64 --decode > keystore.jks
-
-          # Build with signing
           ./gradlew assembleRelease --no-daemon --stacktrace \
             -Pandroid.versionName="${{ steps.version.outputs.version }}" \
             -Pandroid.versionCode="${{ steps.version.outputs.version_code }}" \
@@ -101,11 +94,8 @@ jobs:
             -Pandroid.storePassword="$KEYSTORE_PASSWORD" \
             -Pandroid.keyAlias="$KEY_ALIAS" \
             -Pandroid.keyPassword="$KEY_PASSWORD"
-
-          # Clean up keystore
           rm -f keystore.jks
 
-      # ── 9. Build unsigned release (no keystore) ───────────────────
       - name: Build unsigned release APK
         working-directory: client
         if: env.KEYSTORE_BASE64 == ''
@@ -117,21 +107,19 @@ jobs:
             -Pandroid.versionCode="${{ steps.version.outputs.version_code }}" \
             || echo "Release build failed (unsigned) — debug APK still available"
 
-      # ── 10. Rename APKs with version ──────────────────────────────
-      - name: Rename APK files
+      - name: Rename Agent APK files
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          find client/app/build/outputs/apk -name "*.apk" | while read f; do
+          find client/app/build/outputs/apk -name "*.apk" 2>/dev/null | while read -r f; do
             DIR=$(dirname "$f")
             BASENAME=$(basename "$f" .apk)
             if [[ "$f" != *"${VERSION}"* ]]; then
               mv "$f" "${DIR}/ApiX-Agent-${VERSION}-${BASENAME}.apk" 2>/dev/null || true
             fi
           done
-          echo "APK files:"
-          find client/app/build/outputs/apk -name "*.apk" -ls
+          echo "Agent APK files:"
+          find client/app/build/outputs/apk -name "*.apk" -ls 2>/dev/null || true
 
-      # ── 11. Upload APK artifacts ──────────────────────────────────
       - name: Upload debug APK artifact
         uses: actions/upload-artifact@v4
         with:
@@ -148,34 +136,141 @@ jobs:
           retention-days: 30
           if-no-files-found: ignore
 
-      # ── 12. Create GitHub Release (only on tag push) ──────────────
+  # ── QKSMS + ApiX gateway — JDK 17 + Gradle 7.6 / AGP 7.4 / compileSdk 33 ─
+  build-qksms:
+    name: Build ApiX QKSMS (gateway) APK
+    runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract version info
+        id: version
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            VERSION="${{ github.ref_name }}"
+          else
+            VERSION="dev-$(git rev-parse --short HEAD)"
+          fi
+          VERSION_CODE=$(git rev-list --count HEAD)
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "version_code=${VERSION_CODE}" >> $GITHUB_OUTPUT
+          echo "QKSMS build version: ${VERSION} (code: ${VERSION_CODE})"
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: wrapper
+          build-root-directory: test/qksms
+
+      - name: Set up Android SDK (matches test/qksms compileSdk 33)
+        uses: android-actions/setup-android@v3
+        with:
+          log-accepted-android-sdk-licenses: true
+          packages: |
+            platform-tools
+            platforms;android-33
+            build-tools;33.0.2
+
+      - name: Grant execute permission to gradlew
+        working-directory: test/qksms
+        run: chmod +x gradlew
+
+      - name: Write local.properties
+        working-directory: test/qksms
+        run: echo "sdk.dir=${ANDROID_SDK_ROOT}" > local.properties
+
+      # Debug APK does not need a keystore. For signed *release* on CI, add test/qksms/keystore
+      # (e.g. decode from a secret) and set keystore_password, key_alias, key_password env — see presentation/build.gradle.
+
+      - name: Assemble noAnalytics debug APK
+        working-directory: test/qksms
+        run: |
+          ./gradlew :presentation:assembleNoAnalyticsDebug --no-daemon --stacktrace \
+            -Pandroid.versionName="${{ steps.version.outputs.version }}" \
+            -Pandroid.versionCode="${{ steps.version.outputs.version_code }}"
+
+      - name: Rename QKSMS APK files
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          find test/qksms/presentation/build/outputs/apk -name "*.apk" 2>/dev/null | while read -r f; do
+            DIR=$(dirname "$f")
+            BASENAME=$(basename "$f" .apk)
+            if [[ "$BASENAME" != ApiX-QKSMS-* ]]; then
+              mv "$f" "${DIR}/ApiX-QKSMS-${VERSION}-${BASENAME}.apk" 2>/dev/null || true
+            fi
+          done
+          echo "QKSMS APK files:"
+          find test/qksms/presentation/build/outputs/apk -name "*.apk" -ls 2>/dev/null || true
+
+      - name: Upload QKSMS APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: apix-qksms-debug-${{ steps.version.outputs.version }}
+          path: test/qksms/presentation/build/outputs/apk/noAnalytics/debug/*.apk
+          retention-days: 30
+          if-no-files-found: warn
+
+  # ── GitHub Release (tag pushes only): Agent + QKSMS ─────────────────────
+  release:
+    name: Create GitHub Release
+    needs: [build-client, build-qksms]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download all APK artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: apix-*
+          path: release-apks
+          merge-multiple: true
+
+      - name: List release APKs
+        run: find release-apks -name '*.apk' -ls
+
       - name: Create GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          name: "ApiX Agent ${{ steps.version.outputs.version }}"
+          name: "ApiX ${{ needs.build-client.outputs.version }}"
           tag_name: ${{ github.ref_name }}
           draft: false
           prerelease: ${{ contains(github.ref_name, '-beta') || contains(github.ref_name, '-alpha') || contains(github.ref_name, '-rc') }}
           generate_release_notes: true
-          files: |
-            client/app/build/outputs/apk/**/*.apk
+          files: release-apks/**/*.apk
           body: |
-            ## ApiX Agent ${{ steps.version.outputs.version }}
+            ## ApiX ${{ needs.build-client.outputs.version }}
 
-            ### Installation
-            1. Download the APK below (use **debug** for testing, **release** for production)
-            2. Enable "Install from unknown sources" in Android settings
-            3. Open the APK to install
-            4. Launch **ApiX Agent** and point it at your gateway server
+            ### APKs in this release
+            - **ApiX Agent** — standalone SMS relay client (`ApiX-Agent-*.apk`)
+            - **ApiX QKSMS** — QKSMS fork with drawer **ApiX gateway** (`ApiX-QKSMS-*.apk`, `noAnalytics` debug)
+
+            ### ApiX Agent
+            1. Download **ApiX-Agent-**…**.apk** (debug for testing, release when signed)
+            2. Enable install from unknown sources, install, open **ApiX Agent**
+            3. Point it at your gateway server
+
+            ### ApiX QKSMS (gateway)
+            1. Download **ApiX-QKSMS-**…**.apk** (default SMS app; use **noAnalytics** build)
+            2. Install, set as default SMS app, open drawer → **ApiX gateway**
+            3. Configure host/port (or **wss**), optional device / pairing token, **Start relay**
 
             ### Requirements
-            - Android 4.3 (Jelly Bean MR2 / API 18) or higher
-            - Permissions: SMS, Phone State, Internet, Boot
+            - **Agent:** Android 5+ (API 21+) typical; see client `minSdk`
+            - **QKSMS build:** Android 5+ (API 21+); **compileSdk 33**, **targetSdk 29** (`test/qksms`)
 
-            ### Server Setup
-            Run the server with `./apix.sh` from the `server/` directory.
-            Android devices auto-discover the server via mDNS on the same LAN.
-
-            **Version code:** ${{ steps.version.outputs.version_code }}
+            **Version code:** ${{ needs.build-client.outputs.version_code }}
             **Build:** ${{ github.sha }}

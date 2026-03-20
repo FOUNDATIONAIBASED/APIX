@@ -26,4 +26,16 @@
         android:textColor="@color/text_primary"
         android:text="Point camera at the QR code shown in\nthe ApiX Gateway management console → Devices" />
 
+    <Button
+        android:id="@+id/btnManualEntry"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginBottom="16dp"
+        android:text="@string/qr_use_manual_setup"
+        android:textColor="@color/text_secondary"
+        android:background="@drawable/bg_btn_ghost"
+        android:fontFamily="monospace"
+        android:textSize="12sp" />
+
 </LinearLayout>

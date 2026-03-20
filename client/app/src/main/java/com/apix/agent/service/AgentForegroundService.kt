@@ -19,6 +19,7 @@ import androidx.core.app.NotificationCompat
 import com.apix.agent.R
 import com.apix.agent.model.DeviceInfo
 import com.apix.agent.network.WebSocketClient
+import com.apix.agent.util.AppLog
 import com.apix.agent.util.PreferenceManager
 import com.apix.agent.util.SimUtils
 import com.google.gson.JsonObject
@@ -109,6 +110,7 @@ class AgentForegroundService : Service() {
 
             override fun onConnected() {
                 Log.i(TAG, "WS connected to $wsUrl")
+                dbg("WS connected")
                 updateStatus(STATUS_CONNECTED)
                 registerDevice()
                 startHeartbeat()
@@ -161,6 +163,11 @@ class AgentForegroundService : Service() {
             prefs.pairingToken = null  // consume it
         }
         wsClient.send(payload)
+        dbg("sent register (${simsList.size} SIMs)")
+    }
+
+    private fun dbg(msg: String) {
+        if (prefs.debugUiLogs) AppLog.add(msg)
     }
 
     // ── Handle messages from server ───────────────────────────

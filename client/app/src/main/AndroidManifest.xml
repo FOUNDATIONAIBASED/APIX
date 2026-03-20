@@ -46,12 +46,6 @@
         <!-- Activities -->
         <activity
             android:name=".ui.DiscoverActivity"
-            />
-
-        <activity
-            android:name=".ui.QrScanActivity"
-            android:screenOrientation="portrait"
-            android:label="Scan QR Code"
             android:exported="true"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
@@ -59,6 +53,13 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".ui.QrScanActivity"
+            android:screenOrientation="portrait"
+            android:label="@string/qr_scan_title"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
 
         <activity
             android:name=".ui.MainActivity"

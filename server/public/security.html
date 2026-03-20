@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Security Center — ApiX Gateway</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root { --bg:#07090f;--bg2:#0f1320;--bd:#1c2640;--tx:#e8edf7;--tx2:#7e8faf;--c1:#3b82f6;--ok:#10b981;--err:#ef4444; }
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;padding:28px 20px 60px;}
+h1{font-size:22px;font-weight:700;margin-bottom:6px;}
+.sub{color:var(--tx2);font-size:13px;margin-bottom:28px;max-width:720px;line-height:1.5;}
+.card{background:var(--bg2);border:1px solid var(--bd);border-radius:12px;padding:20px 22px;margin-bottom:18px;max-width:920px;}
+.card h2{font-size:15px;margin-bottom:14px;color:var(--c1);}
+.row{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-bottom:12px;}
+label{display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--tx2);text-transform:uppercase;letter-spacing:.04em;}
+input,select,textarea{background:#131a2c;border:1px solid var(--bd);color:var(--tx);padding:9px 12px;border-radius:8px;font-size:13px;min-width:160px;font-family:inherit;}
+textarea{min-width:280px;min-height:72px;font-family:'JetBrains Mono',monospace;font-size:12px;}
+button{background:linear-gradient(135deg,var(--c1),#6366f1);color:#fff;border:none;padding:10px 18px;border-radius:8px;font-weight:600;cursor:pointer;font-size:13px;}
+button.secondary{background:#131a2c;border:1px solid var(--bd);color:var(--tx);}
+button.danger{background:rgba(239,68,68,.15);color:#fca5a5;border:1px solid rgba(239,68,68,.3);}
+table{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px;}
+th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--bd);}
+th{color:var(--tx2);font-weight:600;font-size:10px;text-transform:uppercase;}
+.mono{font-family:'JetBrains Mono',monospace;font-size:11px;}
+.msg{padding:10px 14px;border-radius:8px;margin:10px 0;font-size:13px;display:none;}
+.msg.on{display:block;}
+.msg.ok{background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.25);color:#6ee7b7;}
+.msg.err{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:#fca5a5;}
+.nav{margin-bottom:20px;}
+.nav a{color:var(--c1);text-decoration:none;font-size:13px;}
+.help{font-size:12px;color:var(--tx2);line-height:1.55;margin-top:10px;}
+.help code{background:#131a2c;padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11px;}
+</style>
+</head>
+<body>
+<div class="nav"><a href="/">← Back to console</a></div>
+<h1>Security Center</h1>
+<p class="sub">Manage IP allow/block rules, review devices that announced themselves for pairing, tune fail2ban-style login protection, and optionally push blocked IPs to a file in GitHub for infra automation (firewalls, SIEM, etc.).</p>
+<div id="msg" class="msg"></div>
+
+<div class="card">
+  <h2>Fail2ban (failed logins)</h2>
+  <p class="help">After too many failed password attempts from one IP, that address is <strong>blocked</strong> for all API/Web UI access. If the username matched a real account with an email, we send a message with a link to <strong>unblock only that IP</strong> if the attempts were legitimate.</p>
+  <div class="row">
+    <label>Enabled <select id="fbOn"><option value="1">Yes</option><option value="0">No</option></select></label>
+    <label>Threshold (attempts) <input type="number" id="fbTh" min="3" step="1"></label>
+    <label>Window (minutes) <input type="number" id="fbWin" min="1" step="1"></label>
+    <button type="button" onclick="saveFb()">Save</button>
+  </div>
+</div>
+
+<div class="card">
+  <h2>IP rules (global)</h2>
+  <p class="help">An <code>allow</code> rule overrides <code>block</code> for that IP/CIDR. Use <code>block</code> to manually ban scanners; use <code>allow</code> to exempt a trusted admin IP from automatic blocks.</p>
+  <div class="row">
+    <label>CIDR or IP <input type="text" id="ruleCidr" placeholder="203.0.113.50 or 10.0.0.0/24"></label>
+    <label>Mode <select id="ruleMode"><option value="block">block</option><option value="allow">allow</option></select></label>
+    <label>Note <input type="text" id="ruleNote" placeholder="reason"></label>
+    <button type="button" onclick="addRule()">Add rule</button>
+  </div>
+  <table><thead><tr><th>CIDR</th><th>Mode</th><th>Source</th><th>Note</th><th></th></tr></thead><tbody id="rulesBody"></tbody></table>
+</div>
+
+<div class="card">
+  <h2>Sessions — block IP</h2>
+  <p class="help">Paste a session token from the audit/sessions list to revoke it and add a <strong>block</strong> rule for the IP that session used.</p>
+  <div class="row">
+    <label>Session token <input type="text" id="sessTok" placeholder="hex token" style="min-width:320px"></label>
+    <button type="button" class="danger" onclick="blockSess()">Revoke &amp; block IP</button>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Client discovery hints</h2>
+  <p class="help"><strong>Apix CLI</strong> can call <code>POST /api/v1/devices/announce</code> before connecting; those clients appear here with their IP as seen by this server — useful when pairing phones on the same LAN.</p>
+  <button type="button" class="secondary" onclick="loadHints()">Refresh</button>
+  <button type="button" class="danger" onclick="clearHints()">Clear list</button>
+  <table><thead><tr><th>Last seen</th><th>Client IP</th><th>WS host</th><th>Port</th><th>Model</th></tr></thead><tbody id="hintsBody"></tbody></table>
+</div>
+
+<div class="card">
+  <h2>mDNS — other gateways on LAN</h2>
+  <p class="help">Scans for other <code>_apix._tcp</code> services (about 4s). Does not replace router tools; handy in multi-gateway labs.</p>
+  <button type="button" class="secondary" onclick="mdnsScan()">Scan LAN</button>
+  <pre id="mdnsOut" class="mono" style="margin-top:12px;white-space:pre-wrap;word-break:break-all;"></pre>
+</div>
+
+<div class="card">
+  <h2>GitHub — export blocked IPs</h2>
+  <p class="help">Create a <strong>classic</strong> personal access token with <code>repo</code> scope, or a fine-grained token with read/write on <strong>Contents</strong> for the target repo. Set <code>owner/repo</code>, file path (e.g. <code>security/banned-ips.txt</code>), and branch. Each sync overwrites that file with a comment header plus one CIDR/IP per line from current <strong>block</strong> rules.</p>
+  <div class="row">
+    <label>Repository <input type="text" id="ghRepo" placeholder="myorg/myinfra"></label>
+    <label>File path <input type="text" id="ghPath" placeholder="security/banned-ips.txt"></label>
+    <label>Branch <input type="text" id="ghBranch" placeholder="main"></label>
+  </div>
+  <div class="row">
+    <label>PAT (paste to set; leave blank to keep current) <input type="password" id="ghPat" placeholder="ghp_…" style="min-width:280px"></label>
+    <button type="button" onclick="saveGh()">Save GitHub settings</button>
+    <button type="button" onclick="doGhSync()">Push bans now</button>
+  </div>
+</div>
+
+<script>
+function showMsg(text, ok) {
+  const m = document.getElementById('msg');
+  m.textContent = text;
+  m.className = 'msg on ' + (ok ? 'ok' : 'err');
+}
+async function api(method, path, body) {
+  const r = await fetch(path, {
+    method,
+    credentials: 'include',
+    headers: body ? { 'Content-Type': 'application/json' } : {},
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || r.statusText);
+  return j;
+}
+async function init() {
+  const me = await fetch('/api/auth/me', { credentials: 'include' });
+  if (!me.ok) { location.href = '/login?redirect=' + encodeURIComponent('/security.html'); return; }
+  const u = await me.json();
+  if (u.user?.role !== 'admin') { showMsg('Admin only.', false); return; }
+  await loadAll();
+}
+async function loadAll() {
+  const [s, rules, hints] = await Promise.all([
+    api('GET', '/api/v1/admin/security/settings'),
+    api('GET', '/api/v1/admin/security/ip-rules'),
+    api('GET', '/api/v1/admin/security/discovery-hints'),
+  ]);
+  document.getElementById('fbOn').value = s.fail2ban_enabled === '0' ? '0' : '1';
+  document.getElementById('fbTh').value = s.fail2ban_threshold || '8';
+  document.getElementById('fbWin').value = s.fail2ban_window_minutes || '15';
+  document.getElementById('ghRepo').value = s.github_sync_repo || '';
+  document.getElementById('ghPath').value = s.github_sync_path || 'security/banned-ips.txt';
+  document.getElementById('ghBranch').value = s.github_sync_branch || 'main';
+  const tb = document.getElementById('rulesBody');
+  tb.innerHTML = (rules.rules || []).map(r => `<tr>
+    <td class="mono">${r.cidr}</td><td>${r.mode}</td><td>${r.source}</td><td>${r.note || '—'}</td>
+    <td><button class="danger secondary" onclick="delRule('${r.id}')">Delete</button></td></tr>`).join('') || '<tr><td colspan="5">No rules</td></tr>';
+  const hb = document.getElementById('hintsBody');
+  hb.innerHTML = (hints.hints || []).map(h => `<tr>
+    <td class="mono">${h.last_seen}</td><td class="mono">${h.client_ip}</td><td>${h.ws_host || '—'}</td><td>${h.ws_port ?? '—'}</td><td>${h.android_model || '—'}</td></tr>`).join('') || '<tr><td colspan="5">No hints yet</td></tr>';
+}
+async function saveFb() {
+  try {
+    await api('PUT', '/api/v1/admin/security/settings', {
+      fail2ban_enabled: document.getElementById('fbOn').value === '1',
+      fail2ban_threshold: +document.getElementById('fbTh').value,
+      fail2ban_window_minutes: +document.getElementById('fbWin').value,
+    });
+    showMsg('Fail2ban settings saved.', true);
+  } catch (e) { showMsg(e.message, false); }
+}
+async function addRule() {
+  try {
+    await api('POST', '/api/v1/admin/security/ip-rules', {
+      cidr: document.getElementById('ruleCidr').value.trim(),
+      mode: document.getElementById('ruleMode').value,
+      note: document.getElementById('ruleNote').value.trim(),
+    });
+    document.getElementById('ruleCidr').value = '';
+    showMsg('Rule added.', true);
+    loadAll();
+  } catch (e) { showMsg(e.message, false); }
+}
+async function delRule(id) {
+  if (!confirm('Delete this rule?')) return;
+  try {
+    await api('DELETE', '/api/v1/admin/security/ip-rules/' + id);
+    showMsg('Deleted.', true);
+    loadAll();
+  } catch (e) { showMsg(e.message, false); }
+}
+async function blockSess() {
+  const session_token = document.getElementById('sessTok').value.trim();
+  if (!session_token) return showMsg('Paste session token', false);
+  try {
+    const r = await api('POST', '/api/v1/admin/security/block-session-ip', { session_token });
+    showMsg('Blocked ' + r.cidr + ' and revoked session.', true);
+    loadAll();
+  } catch (e) { showMsg(e.message, false); }
+}
+async function loadHints() { try { await loadAll(); showMsg('Refreshed.', true); } catch (e) { showMsg(e.message, false); } }
+async function clearHints() {
+  if (!confirm('Clear all discovery hints?')) return;
+  try {
+    await api('DELETE', '/api/v1/admin/security/discovery-hints');
+    showMsg('Cleared.', true);
+    loadAll();
+  } catch (e) { showMsg(e.message, false); }
+}
+async function mdnsScan() {
+  document.getElementById('mdnsOut').textContent = 'Scanning…';
+  try {
+    const r = await api('GET', '/api/v1/admin/security/mdns-scan');
+    document.getElementById('mdnsOut').textContent = JSON.stringify(r.services || [], null, 2);
+  } catch (e) {
+    document.getElementById('mdnsOut').textContent = e.message;
+  }
+}
+async function saveGh() {
+  try {
+    await api('PUT', '/api/v1/admin/security/settings', {
+      github_sync_repo: document.getElementById('ghRepo').value.trim(),
+      github_sync_path: document.getElementById('ghPath').value.trim(),
+      github_sync_branch: document.getElementById('ghBranch').value.trim(),
+    });
+    const pat = document.getElementById('ghPat').value;
+    if (pat) await api('PUT', '/api/v1/admin/security/github-token', { token: pat });
+    document.getElementById('ghPat').value = '';
+    showMsg('GitHub settings saved.', true);
+  } catch (e) { showMsg(e.message, false); }
+}
+async function doGhSync() {
+  try {
+    const r = await api('POST', '/api/v1/admin/security/github-sync');
+    showMsg('GitHub updated. Lines: ' + r.lines + (r.commit ? ', commit ' + r.commit.slice(0, 7) : ''), true);
+  } catch (e) { showMsg(e.message, false); }
+}
+init();
+</script>
+</body>
+</html>

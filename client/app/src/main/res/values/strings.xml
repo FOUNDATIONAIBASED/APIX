@@ -1,9 +1,11 @@
 <resources>
-    <string name="app_name">ApiX Agent</string>
+    <string name="app_name">Apix CLI</string>
 
     <!-- Discover -->
-    <string name="discover_title">ApiX Agent</string>
-    <string name="discover_subtitle">Connect to ApiX Gateway Server</string>
+    <string name="discover_title">Apix CLI</string>
+    <string name="discover_subtitle">Connect to your ApiX Gateway</string>
+    <string name="qr_scan_title">Scan pairing QR</string>
+    <string name="qr_use_manual_setup">Use network scan or enter server manually</string>
     <string name="discover_scanning">Scanning network…</string>
     <string name="discover_scan_btn">Scan for Servers</string>
     <string name="discover_manual_btn">Enter Server Manually</string>
@@ -43,6 +45,8 @@
     <string name="log_tab_sent">Sent</string>
     <string name="log_tab_received">Received</string>
     <string name="log_tab_failed">Failed</string>
+    <string name="log_tab_debug">Debug</string>
+    <string name="log_debug_empty">No debug lines yet. Enable “Debug log in UI” in Settings, then reconnect.</string>
     <string name="log_empty">No messages yet</string>
     <string name="log_mms_badge">MMS</string>
 
@@ -61,6 +65,8 @@
     <string name="settings_theme_section">Appearance</string>
     <string name="settings_theme_title">Theme</string>
     <string name="settings_advanced_section">Advanced</string>
+    <string name="settings_debug_logs_title">Debug log in UI</string>
+    <string name="settings_debug_logs_desc">Show connection and announce events in Log → Debug (for troubleshooting).</string>
     <string name="settings_ws_ping">WebSocket Ping Interval (seconds)</string>
     <string name="settings_heartbeat">Heartbeat Interval (seconds)</string>
     <string name="settings_log_level">Log Verbosity</string>
@@ -69,9 +75,9 @@
 
     <!-- Notifications -->
     <string name="notif_channel_id">apix_agent_service</string>
-    <string name="notif_channel_name">ApiX Agent Service</string>
+    <string name="notif_channel_name">Apix CLI Service</string>
     <string name="notif_channel_desc">Persistent relay service status</string>
-    <string name="notif_title">ApiX Agent</string>
+    <string name="notif_title">Apix CLI</string>
     <string name="notif_text_connected">Connected · relaying SMS/MMS</string>
     <string name="notif_text_reconnecting">Reconnecting to server…</string>
     <string name="notif_text_offline">Offline — tap to reconnect</string>

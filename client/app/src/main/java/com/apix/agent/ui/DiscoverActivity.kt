@@ -16,6 +16,7 @@ import com.apix.agent.R
 import com.apix.agent.databinding.ActivityDiscoverBinding
 import com.apix.agent.databinding.DialogManualServerBinding
 import com.apix.agent.model.ServerInfo
+import com.apix.agent.network.ServerAnnounce
 import com.apix.agent.network.ServerDiscovery
 import com.apix.agent.util.PreferenceManager
 
@@ -195,7 +196,10 @@ class DiscoverActivity : AppCompatActivity() {
         prefs.serverHost  = server.host
         prefs.serverPort  = server.port
         prefs.serverName  = server.name
-        if (server.token != null) prefs.deviceToken = server.token
+        // Pairing token from QR/admin UI (one-time); not the persistent device token
+        if (server.token != null) prefs.pairingToken = server.token
+
+        ServerAnnounce.post(server.host, server.port, prefs)
 
         launchMain()
     }

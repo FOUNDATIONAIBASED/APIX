@@ -4,6 +4,10 @@ A self-hosted, enterprise-grade SMS/MMS gateway that orchestrates a fleet of And
 
 > **Your infrastructure, your rules.**
 
+[![ApiX Server — version from package.json](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FFOUNDATIONAIBASED%2FAPIX%2Fmain%2Fserver%2Fpackage.json&query=%24.version&label=ApiX%20Server&logo=node.js&logoColor=white&color=3b82f6)](https://github.com/FOUNDATIONAIBASED/APIX/blob/main/server/package.json)
+
+**Version source of truth:** [`server/package.json`](./server/package.json) (`version` field). The web console shows a **WordPress-style** status pill in the top bar: **green** when you match the newest GitHub release, **red** when a newer tag exists (including **pre-releases** like `v0.0.1-rc1`), and **cyan** when your local version is **ahead** of GitHub (fork / unpublished). Set `GITHUB_RELEASES_STABLE_ONLY=true` in `server/.env` to ignore pre-releases when picking “latest”.
+
 ---
 
 ## Table of Contents
@@ -20,8 +24,11 @@ A self-hosted, enterprise-grade SMS/MMS gateway that orchestrates a fleet of And
   - [Permissions](#permissions)
   - [Building from Source](#building-from-source)
 - [Server Setup](#server-setup)
+- [Node.js server handbook (this repo)](#nodejs-server-handbook-this-repo)
+- [Email & multi-SMTP (transactional)](#email--multi-smtp-transactional)
 - [Web Console](#web-console)
 - [REST API Quick Reference](#rest-api-quick-reference)
+- [CI/CD & GitHub Actions](#cicd--github-actions)
 - [Architecture](#architecture)
 
 ---
@@ -32,7 +39,7 @@ ApiX Gateway consists of four core components:
 
 | Component | Role |
 |-----------|------|
-| **ApiX Server** | Central Node.js/Go backend — REST API, WebSocket, message routing, queue management |
+| **ApiX Server** | Central backend — REST API, WebSocket, message routing, queue management |
 | **ApiX Agent** | Android client app — relays SMS/MMS through device SIM(s), reports device telemetry |
 | **ApiX Console** | React web dashboard — real-time conversations, device management, campaigns, analytics |
 | **AI Engine** | Ollama / OpenAI-compatible inference — auto-reply, intent classification, sentiment analysis |
@@ -59,6 +66,8 @@ ApiX Gateway consists of four core components:
 │  └───────────────────────────────┘                           │
 └──────────────────────────────────────────────────────────────┘
 ```
+
+> **This repository’s server** is implemented in **Node.js 18+** with **SQLite** (`better-sqlite3`) and serves the dashboard from `server/public/`. The diagram above is a logical overview; your deployment may use Docker-style services or a single `node src/index.js` process — see [Node.js server handbook (this repo)](#nodejs-server-handbook-this-repo).
 
 ---
 
@@ -282,6 +291,10 @@ cd apix-gateway/client
 ./gradlew installDebug
 ```
 
+#### GitHub Actions (releases)
+
+See [CI/CD & GitHub Actions](#cicd--github-actions) in this README for current JDK/SDK versions.
+
 #### Project Structure
 
 ```
@@ -363,6 +376,34 @@ ApiX supports three access patterns:
 
 **Important:** If you see `SSL_ERROR_RX_RECORD_TOO_LONG`, you are using `https://` while the server serves HTTP. Use `http://` until you have configured a reverse proxy with TLS.
 
+### Deployment mode, CORS, and API keys
+
+| Setting | Homelab (default) | Production |
+|--------|-------------------|------------|
+| `DEPLOYMENT_MODE` | `homelab` | `production` |
+| Browser CORS | Permissive (any origin) | Only origins listed in `CORS_ORIGINS` (comma-separated) |
+| API key in URL | `?api_key=` allowed | **Blocked** — use `X-API-Key` or `Authorization: Bearer` |
+| Session cookie `Secure` | Set when the request is HTTPS or `USE_SSL=true` | Same (always use HTTPS in production) |
+
+After the first-time setup wizard, `deployment_mode` is stored in the database and can be changed under **Settings** (`deployment_mode`). **Factory reset** wipes all data, users, devices, settings, and local backup files under `data/`, then the process restarts so you can run setup again.
+
+### Email & multi-SMTP (transactional)
+
+Password resets, invitations, and other transactional mail go through a **multi-SMTP** layer in the Node server (`server/src/email/`).
+
+| Topic | Details |
+|--------|---------|
+| **Profiles** | Stored in SQLite (`settings.smtp_profiles_json`). Default **25** profiles, **max 100** — override with `SMTP_MAX_PROFILES` in `server/.env`. |
+| **Legacy `.env`** | If **no** DB profiles are configured, `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`, etc. are used. If **any** DB profile exists, `.env` SMTP is **ignored** for sending. |
+| **Quotas** | Per profile: `hourly`, `daily`, `weekly`, `monthly` limits. Use **`0`** for unlimited on that window. Counts use **UTC** calendar buckets. |
+| **Routing** | `fallback` (priority order, skip exhausted / retry on error), `round_robin`, `least_used` (fewest sends in current UTC hour). |
+| **Admin alerts** | When usage crosses `limit_warn_threshold_pct` (default 80%) or a window is full, admins get an email (deduped per profile per UTC day). Recipients: `smtp_admin_notify_emails` plus users with role **admin** and an **email** on file. |
+| **UI** | **Settings → Email / SMTP** (admin): JSON editor, routing, threshold, **Refresh usage**, **Test SMTP**. |
+| **API** | Session cookie, **admin only**: `GET/PUT /api/auth/email-smtp/config`, `GET /api/auth/email-smtp/usage`, `POST /api/auth/email-smtp/test`. See **`/docs`** (`server/public/docs.html`). |
+| **Status** | `GET /api/v1/status` includes `smtp_configured`, `smtp_profile_count`, `smtp_routing_mode`, and a redacted primary host/from/user preview. |
+
+**Security note:** SMTP passwords in DB settings are stored in **plain text** (like other server-stored secrets). Restrict filesystem/backup access to the SQLite database.
+
 ### Manual Server Configuration
 
 If running outside Docker or on a different subnet:
@@ -372,27 +413,200 @@ If running outside Docker or on a different subnet:
 3. In the ApiX Console (web UI), go to **Settings > Network** and verify mDNS broadcasting is enabled.
 4. On the Android agent, if auto-discovery doesn't find the server, use **Enter Server Manually** and provide the IP/port.
 
+### Node.js server handbook (this repo)
+
+Use this when you run the gateway from the `server/` folder (not a separate Docker stack).
+
+#### Prerequisites
+
+| Requirement | Notes |
+|-------------|--------|
+| **Node.js** | **≥ 18** (see `server/package.json` → `engines`) |
+| **npm** | Comes with Node |
+| **Build tools** | `better-sqlite3` needs a C++ toolchain on some platforms (`build-essential` on Debian/Ubuntu, Xcode CLT on macOS) |
+
+#### First run (development / homelab)
+
+```bash
+cd server
+npm install
+cp .env.example .env
+# Edit .env: set JWT_SECRET, HMAC_SECRET (e.g. openssl rand -hex 32)
+node src/index.js
+# or: npm run dev   (watch mode)
+```
+
+Open **`http://<server-ip>:3000`** (default `PORT=3000`). On a fresh database you’ll get the **setup wizard** to create the first admin user. After that, sign in from the browser; the UI stores a session cookie (`apix_session`).
+
+#### What lives where
+
+```
+server/
+├── src/index.js          # HTTP server, mounts routes & static files
+├── src/routes/           # REST handlers (auth, messages, devices, …)
+├── src/email/            # Multi-SMTP config, routing, limits, transport
+├── public/               # Dashboard SPA (index.html) + /docs (docs.html)
+├── data/                 # SQLite DB path (default ./data/apix.db from .env)
+└── .env                  # Secrets & tuning (copy from .env.example)
+```
+
+#### Two ways to authenticate
+
+| Method | When to use | How |
+|--------|-------------|-----|
+| **Browser session** | Using the web UI; admin-only routes (e.g. multi-SMTP) | Log in via UI or `POST /api/auth/login` → cookie `apix_session` (also returns `token` in JSON for APIs that accept it) |
+| **API key** | Scripts, mobile apps, integrations | Header `X-API-Key: apix_…` or `Authorization: Bearer apix_…` |
+
+In **`DEPLOYMENT_MODE=production`**, putting the API key in the query string (`?api_key=`) is **disabled** — use headers only. See [Deployment mode, CORS, and API keys](#deployment-mode-cors-and-api-keys).
+
+#### Health check
+
+```bash
+curl -s http://127.0.0.1:3000/api/v1/status | jq .
+```
+
+Useful fields: general uptime, `smtp_configured`, `smtp_profile_count`, `smtp_routing_mode`, and redacted SMTP preview when configured.
+
+#### Multi-SMTP: save config with `curl` (admin session)
+
+After logging in, reuse the session cookie for admin API calls.
+
+```bash
+BASE=http://127.0.0.1:3000
+# 1) Log in (captures Set-Cookie)
+curl -s -c cookies.txt -X POST "$BASE/api/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"your-password"}'
+
+# 2) PUT full config (admin only)
+curl -s -b cookies.txt -X PUT "$BASE/api/auth/email-smtp/config" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "routing_mode": "fallback",
+    "limit_warn_threshold_pct": 80,
+    "admin_notify_emails": "ops@example.com",
+    "profiles": [
+      {
+        "id": "primary",
+        "enabled": true,
+        "name": "SendGrid lane",
+        "host": "smtp.sendgrid.net",
+        "port": 587,
+        "secure": false,
+        "user": "apikey",
+        "pass": "SG.xxx",
+        "from": "alerts@example.com",
+        "from_name": "ApiX Gateway",
+        "reply_to": "support@example.com",
+        "pool": false,
+        "tls_reject_unauthorized": true,
+        "priority": 10,
+        "limits": { "hourly": 100, "daily": 2000, "weekly": 0, "monthly": 0 }
+      },
+      {
+        "id": "backup",
+        "enabled": true,
+        "name": "Gmail relay",
+        "host": "smtp.gmail.com",
+        "port": 587,
+        "secure": false,
+        "user": "you@gmail.com",
+        "pass": "app-password",
+        "from": "you@gmail.com",
+        "priority": 20,
+        "limits": { "hourly": 0, "daily": 0, "weekly": 0, "monthly": 0 }
+      }
+    ]
+  }'
+
+# 3) Verify transport
+curl -s -b cookies.txt -X POST "$BASE/api/auth/email-smtp/test" \
+  -H "Content-Type: application/json" \
+  -d '{}'
+
+# 4) Optional: test only one profile
+curl -s -b cookies.txt -X POST "$BASE/api/auth/email-smtp/test" \
+  -H "Content-Type: application/json" \
+  -d '{"profile_id":"primary"}'
+```
+
+**Routing modes:** `fallback` (ordered by `priority`, skip exhausted quotas / errors), `round_robin`, `least_used` (fewest sends in the current UTC hour). **Limits:** `0` = unlimited for that window. Buckets are **UTC**.
+
+**Important:** If **any** profile is stored in the database, legacy **`SMTP_*` entries in `.env` are ignored** for sending. Remove DB profiles (or clear `smtp_profiles_json` via UI) to fall back to `.env` SMTP.
+
+#### Troubleshooting (server)
+
+| Symptom | What to check |
+|---------|----------------|
+| `SSL_ERROR_RX_RECORD_TOO_LONG` in browser | You opened `https://` but the app serves **HTTP**. Use `http://` or terminate TLS in Nginx/Caddy and set `USE_SSL=true`. |
+| CORS errors after moving to production | Set `DEPLOYMENT_MODE=production` and `CORS_ORIGINS` to your exact site origins (comma-separated). |
+| `401` on `?api_key=` in production | Expected — use `X-API-Key` or `Authorization: Bearer`. |
+| Email not sending | `GET /api/auth/email-smtp/usage` (admin); run **Test SMTP** in Settings; confirm `host`/`user`/`pass` and provider rate limits. |
+| “No SMTP” but `.env` has values | DB profiles may override — check Settings → Email / SMTP or `GET /api/auth/email-smtp/config` → `using_env_fallback`. |
+
+#### Safe in-place updates (Git + backup + auto-revert)
+
+Use this when the server was installed from a **Git clone** (e.g. [FOUNDATIONAIBASED/APIX](https://github.com/FOUNDATIONAIBASED/APIX)):
+
+1. **Menu:** `cd server && ./apix.sh` → option **`10) Safe update`** (type `UPDATE` to confirm).
+2. **Script:** `bash server/scripts/apix-update.sh` (same steps; supports env vars `APIX_GIT_BRANCH`, `APIX_SKIP_SERVICE_STOP`, etc.).
+
+**What it does:** stops the process (systemd `apix-gateway` if present, else `.apix.pid` / port), archives `data/` into `server/.apix-backups/updates/<timestamp>/`, runs `git pull --ff-only`, `npm install`, and `node --check src/index.js`. On any failure it **restores the previous Git commit and data directory** and writes **`update-error.log`** plus **`update.log`** in that session folder. Old sessions are pruned (default: keep **15**).
+
+**Android APKs:** after sign-in, **Settings → Android clients (GitHub)** loads the latest release assets from the API (`GET /api/v1/admin/github-releases`). Set `GITHUB_REPO` in `server/.env` if your fork differs (default `FOUNDATIONAIBASED/APIX`).
+
+**Uninstall:** `./apix.sh` option **9** can optionally remove **`server/.apix-backups/`** and **`server/logs/`** in addition to `node_modules`.
+
+**Full interactive API reference:** open **`/docs`** on your server (file: `server/public/docs.html`).
+
 ---
 
 ## Web Console
 
-The **ApiX Console** is a React + Vite + TailwindCSS web app that provides:
+This repository ships a **single-page management UI** under `server/public/` (dashboard, settings, devices, etc.). A separate **React + Vite** console is also described in the architecture doc; use whichever matches your deployment.
 
-- **Dashboard** — live throughput graphs, device fleet grid, number pool heatmap, AI queue depth
-- **Conversations** — iMessage/WhatsApp-style threaded view with live sync
-- **Devices** — real-time device grid with approval workflow (Pending > Approved > Active)
-- **Numbers** — full number pool with carrier, health score, usage stats
-- **Campaigns** — bulk SMS/MMS builder with delay modes, number routing, carrier safety scoring
-- **API Keys & Webhooks** — scoped key management, webhook subscriptions, delivery logs
-- **AI Instances** — manage Ollama/OpenAI endpoints, load balancing, trigger configuration
-- **Statistics** — per-number, per-device, per-campaign breakdowns with CSV/PDF export
+#### Documentation in the UI
+
+- In the **left sidebar**, use **API Docs** — opens **`/docs`** in a new tab (`docs.html`). That page is the **detailed REST reference** with copy-paste `curl` examples, authentication notes, multi-SMTP admin APIs, Twilio-compat, and more.
+- Bookmark **`http://your-host:3000/docs`** for operators who don’t use the main dashboard.
+- **Top bar — version status** (after sign-in): compares **`server/package.json`** to the newest GitHub release using **semver** (pre-releases such as **`v0.0.1-rc1`** count when they sort higher). **Green** = up to date, **red** = update available, **amber** = check failed, **cyan** = local version ahead of GitHub. **Settings → Software version** shows the same detail.
+
+#### Sidebar tour (bundled UI)
+
+| Area | What you use it for |
+|------|---------------------|
+| **Dashboard** | Fleet overview, throughput, quick health |
+| **Conversations** | Threaded SMS view, live updates |
+| **Devices** | Approve / suspend Android agents, connection state |
+| **Numbers** | Number pool, routing context for sends |
+| **Campaigns** | Bulk sends, delays, strategies |
+| **Live Feed / Drip** | Operational views for traffic and sequences |
+| **Settings** | Network (mDNS), **deployment mode**, **Email / Multi-SMTP** (admin), security-related options |
+| **API Docs** | Full server API documentation (this complements the README) |
+
+The bundled **web UI** also includes features such as:
+
+- **API Keys & Webhooks** — scoped keys, outbound webhooks, delivery logs  
+- **AI / LLM** — when enabled, Ollama/OpenAI-style endpoints for auto-reply  
+- **Statistics / analytics** — usage breakdowns and exports (where implemented in your build)
 
 ---
 
 ## REST API Quick Reference
 
-Base URL: `https://your-server/api/v1/`
-Auth: `Authorization: Bearer <API_KEY>`
+**Base URL (typical homelab):** `http://your-server-ip:3000/api/v1/`  
+**HTTPS production:** `https://your-domain/api/v1/` (reverse proxy + `USE_SSL=true` on the app)
+
+**Auth:** `X-API-Key: apix_…` or `Authorization: Bearer apix_…` (avoid `?api_key=` in production).
+
+**Example — send one SMS:**
+
+```bash
+curl -s -X POST "http://127.0.0.1:3000/api/v1/messages/send" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_KEY" \
+  -d '{"to":"+15551234567","body":"Hello from ApiX"}'
+```
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -411,7 +625,22 @@ Auth: `Authorization: Bearer <API_KEY>`
 | `POST` | `/otp/send` | Send OTP code |
 | `POST` | `/otp/verify` | Verify OTP code |
 
-Full API documentation is available at `https://your-server/api/docs` (OpenAPI 3.1).
+Full API documentation is available at `https://your-server/docs` (static API reference: `server/public/docs.html`). OpenAPI may be offered separately depending on deployment.
+
+---
+
+## CI/CD & GitHub Actions
+
+Workflow: [`.github/workflows/android-build.yml`](.github/workflows/android-build.yml).
+
+| Job | Output |
+|-----|--------|
+| **`build-client`** | ApiX Agent APK from `client/` — JDK **17**, Gradle wrapper |
+| **`build-qksms`** | ApiX QKSMS fork from `test/qksms/` — JDK **17**, Android SDK **API 33** / build-tools **33.0.2**, Gradle **7.6.x** (wrapper), `:presentation:assembleNoAnalyticsDebug` |
+
+- **Releases:** Pushing a tag `v*` builds both jobs and attaches APKs to a GitHub Release.
+- **Manual runs:** `workflow_dispatch` builds artifacts without requiring a tag.
+- **QKSMS signing:** Debug builds use the default debug keystore on the runner. Release signing in CI only applies when a `test/qksms/keystore` file is present and env vars are set (see `test/qksms/presentation/build.gradle` when `CI=true`).
 
 ---
 

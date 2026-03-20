@@ -13,6 +13,7 @@ import androidx.core.content.ContextCompat
 import com.apix.agent.R
 import com.apix.agent.databinding.ActivityQrScanBinding
 import com.apix.agent.model.ServerInfo
+import com.apix.agent.network.ServerAnnounce
 import com.apix.agent.util.PreferenceManager
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.DecodeHintType
@@ -59,6 +60,11 @@ class QrScanActivity : AppCompatActivity() {
 
         binding.tvInstruction.text = "Point camera at the QR code shown in\nthe ApiX Gateway management console → Devices"
 
+        binding.btnManualEntry.setOnClickListener {
+            startActivity(Intent(this, DiscoverActivity::class.java))
+            finish()
+        }
+
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
             != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.CAMERA), CAMERA_PERM_CODE)
@@ -85,7 +91,7 @@ class QrScanActivity : AppCompatActivity() {
             val json     = JSONObject(raw)
             val version  = json.optInt("v", 1)
             val name     = json.optString("name", "ApiX Gateway")
-            val token    = json.optString("token", null)
+            val token    = json.optString("token", "").takeIf { it.isNotBlank() }
             val port     = json.optInt("port", 3000)
             val urlsArr  = json.optJSONArray("urls")
 
@@ -114,6 +120,8 @@ class QrScanActivity : AppCompatActivity() {
                 binding.tvInstruction.text = "✓ Connected to $name\n$firstUrl"
                 Toast.makeText(this, "Gateway configured! Starting agent…", Toast.LENGTH_SHORT).show()
             }
+
+            ServerAnnounce.post(host, wsPort, prefs)
 
             // Brief visual feedback then launch
             binding.root.postDelayed({

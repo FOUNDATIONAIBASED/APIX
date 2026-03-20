@@ -19,6 +19,19 @@ module.exports = {
     trustedProxies:     parseInt(process.env.TRUSTED_PROXIES || '0', 10),
     /** Set USE_SSL=true when behind HTTPS reverse proxy (domain binding). Omit or false for HTTP/LAN/IP access. */
     useSsl:             process.env.USE_SSL            === 'true',
+    /**
+     * homelab  — permissive CORS; API keys may be passed as ?api_key= (still prefer X-API-Key).
+     * production — strict CORS (requires CORS_ORIGINS); query-string API keys rejected.
+     * Overridden by Settings key `deployment_mode` after first setup.
+     */
+    deploymentMode:     (process.env.DEPLOYMENT_MODE || 'homelab').toLowerCase() === 'production'
+        ? 'production'
+        : 'homelab',
+    /** Comma-separated list of allowed browser Origins when deployment_mode is production */
+    corsOrigins:        (process.env.CORS_ORIGINS || '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean),
     /** Allow one-time admin setup when no users exist. Set ALLOW_INITIAL_SETUP=false to disable (e.g. pre-seeded DB). */
     allowInitialSetup:  process.env.ALLOW_INITIAL_SETUP !== 'false',
     // Paths

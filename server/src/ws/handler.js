@@ -1,6 +1,6 @@
 'use strict';
 const { v4: uuidv4 }              = require('uuid');
-const { Devices, Messages, Conversations, OptOuts, PairingTokens, KeywordRules, getDb } = require('../db');
+const { Devices, Messages, Conversations, OptOuts, PairingTokens, KeywordRules, getDb, IpSecurity } = require('../db');
 const { generateDeviceToken }     = require('../auth');
 const cfg                         = require('../config');
 
@@ -64,6 +64,13 @@ function dispatchMms({ msgId, from, to, subject, media, mediaType }) {
 // ── WebSocket connection handler ──────────────────────────────
 function handleConnection(ws, req, emitter) {
     let deviceId = null;
+
+    const clientIp = IpSecurity.normalizeIp(req.socket.remoteAddress);
+    if (IpSecurity.evaluate(clientIp) === 'block') {
+        console.warn(`[WS] Rejected blocked IP ${clientIp}`);
+        try { ws.close(4003, 'IP blocked'); } catch (_) {}
+        return;
+    }
 
     console.log(`[WS] New connection from ${req.socket.remoteAddress}`);
 

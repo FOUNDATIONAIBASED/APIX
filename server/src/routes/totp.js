@@ -14,6 +14,8 @@ const bcrypt   = require('bcryptjs');
 const { authenticator } = require('@otplib/preset-default');
 const QRCode   = require('qrcode');
 const { Users, Sessions, AuditLog } = require('../db');
+const { sessionCookieOpts } = require('../cookies');
+const fail2ban = require('../security/fail2banService');
 const { requireAuth } = require('../auth/middleware');
 
 const APP_NAME = process.env.APP_NAME || 'ApiX Gateway';
@@ -126,7 +128,7 @@ router.post('/backup-codes', requireAuth(), async (req, res) => {
 });
 
 // ── Verify TOTP at login (called when session has pending_2fa flag) ─
-router.post('/verify', (req, res) => {
+router.post('/verify', async (req, res) => {
     const { token: sessionToken, code } = req.body;
     if (!sessionToken || !code) return res.status(400).json({ error: 'token and code required' });
 
@@ -153,6 +155,7 @@ router.post('/verify', (req, res) => {
         const idx = hashes.findIndex(h => bcrypt.compareSync(codeClean, h));
         if (idx === -1) {
             AuditLog.log({ user_id: u.id, username: u.username, action: '2fa.verify_failed', ip: req.ip, result: 'fail' });
+            await fail2ban.onLoginFailure(req, u.username);
             return res.status(401).json({ error: 'Invalid 2FA code' });
         }
         hashes.splice(idx, 1);
@@ -163,10 +166,11 @@ router.post('/verify', (req, res) => {
     const newToken = Sessions.create(u.id, req.ip, req.headers['user-agent']);
     Users.recordLogin(u.id, req.ip);
     AuditLog.log({ user_id: u.id, username: u.username, action: '2fa.verify_ok', ip: req.ip });
+    fail2ban.onLoginSuccess(req);
 
     const u2 = Users.findById(u.id);
     res
-        .cookie('apix_session', newToken, { httpOnly: true, sameSite: 'Lax', maxAge: 30 * 86_400_000 })
+        .cookie('apix_session', newToken, sessionCookieOpts(req))
         .json({
             success: true,
             token: newToken,

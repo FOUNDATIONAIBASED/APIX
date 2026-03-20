@@ -1,8 +1,9 @@
 'use strict';
 const helmet     = require('helmet');
 const rateLimit  = require('express-rate-limit');
+const cors       = require('cors');
 const crypto     = require('crypto');
-const { ApiKeys } = require('./db');
+const { ApiKeys, Settings } = require('./db');
 const cfg        = require('./config');
 
 // ── Helmet security headers ────────────────────────────────────
@@ -24,6 +25,35 @@ const helmetMiddleware = helmet({
         directives: cspDirectives,
     },
     crossOriginEmbedderPolicy: false,
+    hsts: cfg.useSsl
+        ? { maxAge: 31_536_000, includeSubDomains: true, preload: false }
+        : false,
+});
+
+/** Effective mode: DB setting wins after setup; env is fallback for fresh installs / API-only. */
+function getDeploymentMode() {
+    try {
+        const v = Settings.get('deployment_mode');
+        if (v === 'production' || v === 'homelab') return v;
+    } catch (_) { /* DB not ready */ }
+    return cfg.deploymentMode === 'production' ? 'production' : 'homelab';
+}
+
+const corsMiddleware = cors({
+    origin(origin, callback) {
+        if (getDeploymentMode() !== 'production') {
+            return callback(null, true);
+        }
+        if (!origin) return callback(null, true);
+        if (cfg.corsOrigins.length === 0) {
+            console.warn('[CORS] deployment_mode=production but CORS_ORIGINS is empty — blocking browser cross-origin requests');
+            return callback(null, false);
+        }
+        if (cfg.corsOrigins.includes(origin)) return callback(null, true);
+        return callback(null, false);
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 });
 
 // ── Rate limiters ──────────────────────────────────────────────
@@ -82,6 +112,12 @@ function apiKeyAuth(required = true) {
         if (header) {
             rawKey = header.startsWith('Bearer ') ? header.slice(7) : header;
         } else if (req.query.api_key) {
+            if (getDeploymentMode() === 'production') {
+                return res.status(401).json({
+                    error: 'API key in query string is disabled in production mode. Send the X-API-Key header (or Authorization: Bearer).',
+                    code: 'API_KEY_QUERY_FORBIDDEN',
+                });
+            }
             rawKey = req.query.api_key;
         }
 
@@ -168,6 +204,8 @@ function validateRequired(body, fields) {
 
 module.exports = {
     helmetMiddleware,
+    corsMiddleware,
+    getDeploymentMode,
     globalLimiter,
     sendLimiter,
     authLimiter,

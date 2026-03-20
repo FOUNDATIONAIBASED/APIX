@@ -443,6 +443,10 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       Accounts
     </div>
+    <div class="sn-item admin-only" onclick="window.location.href='/security.html'">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      Security Center
+    </div>
     <div class="sn-item admin-only" onclick="goView('audit',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
       Audit Log
@@ -467,9 +471,12 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       Settings
     </div>
-    <a href="/docs" target="_blank" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;margin:1px 0;font-size:12.5px;color:var(--tx2);text-decoration:none;transition:all .15s;border:1px solid transparent;">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 8h.01M11 12h1v4h1"/></svg>
-      API Docs
+    <a href="/docs" target="_blank" title="Full REST reference, curl examples, multi-SMTP, Twilio compat" style="display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:10px 10px;border-radius:8px;margin:4px 0 1px;font-size:12.5px;color:var(--tx2);text-decoration:none;transition:all .15s;border:1px solid var(--b1);background:rgba(59,130,246,.04);">
+      <span style="display:flex;align-items:center;gap:8px;font-weight:600;color:var(--tx);">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 8h.01M11 12h1v4h1"/></svg>
+        Server documentation
+      </span>
+      <span style="font-size:10px;color:var(--tx3);line-height:1.35;padding-left:22px;">Opens /docs — endpoints, auth, examples</span>
     </a>
   </nav>
   <div class="side-footer">
@@ -497,7 +504,10 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
     <button class="tbtn p" id="btnNewLLM" onclick="openLLMModal()" style="display:none;">+ Add Instance</button>
     <button class="tbtn p" id="btnNewKey" onclick="createApiKey()" style="display:none;">+ Generate Key</button>
     <div style="flex:1;"></div>
-    <span id="updateBadge" style="display:none;font-size:10px;font-family:var(--fm);padding:2px 8px;border-radius:6px;background:rgba(245,158,11,.15);color:#fcd34d;border:1px solid rgba(245,158,11,.2);cursor:pointer;" onclick="goView('settings',document.querySelector('.sn-item[onclick*=settings]'))">⬆ Update available</span>
+    <button type="button" id="versionStatusPill" style="display:none;align-items:center;gap:8px;font-size:10px;font-family:var(--fm);font-weight:600;padding:6px 12px;border-radius:8px;cursor:pointer;transition:opacity .15s,transform .12s,filter .12s;background:rgba(148,163,184,.1);border:1px solid var(--b2);color:var(--tx2);outline:none;" title="">
+      <span id="versionStatusDot" style="width:7px;height:7px;border-radius:50%;flex-shrink:0;background:var(--tx3);box-shadow:0 0 0 2px rgba(0,0,0,.15);"></span>
+      <span id="versionStatusText">—</span>
+    </button>
     <a href="/plans" style="font-size:11px;font-family:var(--fm);color:var(--tx3);text-decoration:none;margin-right:8px;" id="planBadgeSidebar"></a>
     <button class="theme-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle theme">🌙</button>
     <div id="userAvatar" onclick="goView('myaccount',document.querySelector('.sn-item[onclick*=myaccount]'))" style="display:none;width:32px;height:32px;border-radius:9px;cursor:pointer;align-items:center;justify-content:center;font-family:var(--fm);font-size:14px;font-weight:700;color:#fff;flex-shrink:0;"></div>
@@ -645,6 +655,14 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
     <!-- ── SETTINGS ── -->
     <div class="view" id="view-settings">
 
+      <!-- WordPress-style version / GitHub update status -->
+      <div class="panel" style="margin-bottom:14px;" id="appVersionPanel">
+        <div class="ph"><div class="ph-t">🔄 Software version</div><span class="ph-s">Running build vs <a id="appVersionRepoLink" href="https://github.com/FOUNDATIONAIBASED/APIX/releases" target="_blank" rel="noopener" style="color:var(--c1);">GitHub releases</a> (semver, includes pre-releases like <code style="font-family:var(--fm);">v0.0.1-rc1</code> unless <code style="font-family:var(--fm);">GITHUB_RELEASES_STABLE_ONLY=true</code>)</span></div>
+        <div class="pb" id="appVersionPanelBody" style="min-height:52px;">
+          <div style="font-size:12px;color:var(--tx3);font-family:var(--fm);">Loading version status…</div>
+        </div>
+      </div>
+
       <!-- Number Mode -->
       <div class="panel" style="margin-bottom:14px;">
         <div class="ph"><div class="ph-t">📡 Number Mode</div><span class="ph-s">Controls how outbound messages are routed across your SIM number pool</span></div>
@@ -703,20 +721,43 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
 
       <!-- SMTP Settings -->
       <div class="panel" style="margin-bottom:14px;">
-        <div class="ph"><div class="ph-t">📧 Email / SMTP</div><span class="ph-s">Used for password reset emails. Configure in <code style="font-family:var(--fm);font-size:11px;">.env</code></span></div>
+        <div class="ph"><div class="ph-t">📧 Email / SMTP</div><span class="ph-s">Password resets &amp; invites — <strong>multiple</strong> SMTP accounts (limit configurable), per-window quotas (UTC), routing &amp; admin alerts</span></div>
         <div class="pb">
           <div class="g g2" style="gap:10px;margin-bottom:10px;">
-            <div><label class="fl">SMTP Host</label><input class="fi" id="smtpHost" placeholder="smtp.gmail.com" readonly></div>
-            <div><label class="fl">SMTP Port</label><input class="fi" id="smtpPort" placeholder="587" readonly></div>
-            <div><label class="fl">From Address</label><input class="fi" id="smtpFrom" placeholder="noreply@yourdomain.com" readonly></div>
-            <div><label class="fl">Username</label><input class="fi" id="smtpUser" placeholder="your@email.com" readonly></div>
+            <div><label class="fl">Active SMTP (summary)</label><input class="fi" id="smtpHost" placeholder="—" readonly></div>
+            <div><label class="fl">Port</label><input class="fi" id="smtpPort" placeholder="—" readonly></div>
+            <div><label class="fl">From Address</label><input class="fi" id="smtpFrom" placeholder="—" readonly></div>
+            <div><label class="fl">Username</label><input class="fi" id="smtpUser" placeholder="—" readonly></div>
           </div>
+          <div id="smtpSummaryLine" style="font-size:11px;color:var(--tx2);margin-bottom:10px;"></div>
           <div style="font-size:11px;color:var(--tx3);margin-bottom:12px;line-height:1.6;">
-            SMTP credentials are set in your <code style="font-family:var(--fm);">.env</code> file and require a server restart to take effect.
-            Set <code style="font-family:var(--fm);">SMTP_HOST</code>, <code style="font-family:var(--fm);">SMTP_USER</code>, <code style="font-family:var(--fm);">SMTP_PASS</code>, and <code style="font-family:var(--fm);">SMTP_FROM</code>.
+            <strong>Legacy:</strong> If no profiles are saved below, the server uses <code style="font-family:var(--fm);">SMTP_*</code> from <code style="font-family:var(--fm);">.env</code> (restart to apply env changes).
           </div>
-          <button class="btn g sm" onclick="testSmtp()">Test SMTP Connection</button>
+          <button class="btn g sm" onclick="testSmtp()">Test SMTP (all profiles)</button>
           <span id="smtpTestResult" style="margin-left:10px;font-size:12px;font-family:var(--fm);color:var(--tx2);"></span>
+
+          <div class="admin-only" style="margin-top:18px;padding-top:14px;border-top:1px solid var(--b2);">
+            <div style="font-size:12px;font-weight:700;margin-bottom:8px;color:var(--c1);">Multi-SMTP (admin)</div>
+            <div class="g g2" style="gap:10px;margin-bottom:10px;">
+              <div><label class="fl">Routing</label>
+                <select class="fsel" id="smtpRoutingMode">
+                  <option value="fallback">Fallback — priority order, next when at limit / error</option>
+                  <option value="round_robin">Round robin — spread across senders</option>
+                  <option value="least_used">Least used (this hour) — soft load balance</option>
+                </select>
+              </div>
+              <div><label class="fl">Notify admins at usage ≥ (%)</label><input class="fi" id="smtpWarnPct" type="number" min="1" max="100" value="80"></div>
+              <div style="grid-column:1/-1;"><label class="fl">Extra notify emails (comma-separated, optional)</label><input class="fi" id="smtpNotifyEmails" placeholder="ops@example.com"></div>
+            </div>
+            <label class="fl">Profiles JSON — max <span id="smtpMaxProfilesN">25</span> (override with <code>SMTP_MAX_PROFILES</code> in server <code>.env</code>, up to 100). <code>limits</code>: use <code>0</code> for unlimited per window (hourly, daily, weekly, monthly)</label>
+            <textarea class="fi" id="smtpProfilesJson" rows="14" style="font-family:var(--fm);font-size:11px;width:100%;resize:vertical;" spellcheck="false" placeholder='[{"id":"p1","enabled":true,"name":"Primary","host":"smtp.example.com","port":587,"secure":false,"user":"","pass":"","from":"noreply@a.com","from_name":"ApiX","reply_to":"","priority":10,"limits":{"hourly":100,"daily":500,"weekly":0,"monthly":0}}]'></textarea>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;">
+              <button class="btn p sm" onclick="saveSmtpMulti()">Save SMTP config</button>
+              <button class="btn g sm" onclick="loadSmtpMulti()">Reload</button>
+              <button class="btn g sm" onclick="loadSmtpUsage()">Refresh usage</button>
+            </div>
+            <pre id="smtpUsageOut" style="margin-top:12px;font-size:11px;color:var(--tx2);white-space:pre-wrap;max-height:220px;overflow:auto;background:var(--bg3);padding:10px;border-radius:8px;border:1px solid var(--b2);display:none;"></pre>
+          </div>
         </div>
       </div>
 
@@ -757,6 +798,14 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
             <button class="btn g" style="justify-content:start;" onclick="window.open('/api/v1/numbers','_blank')">📞 Raw Numbers JSON</button>
             <button class="btn g" style="justify-content:start;" onclick="window.open('/api/v1/messages','_blank')">✉️ Raw Messages JSON</button>
           </div>
+        </div>
+      </div>
+
+      <!-- Android APKs from GitHub Releases -->
+      <div class="panel" style="margin-bottom:14px;">
+        <div class="ph"><div class="ph-t">📲 Android clients (GitHub)</div><span class="ph-s">Latest release APKs from the configured <code style="font-family:var(--fm);">GITHUB_REPO</code> (default <code style="font-family:var(--fm);">FOUNDATIONAIBASED/APIX</code>). Names containing <em>qksms</em>, <em>noanalytics</em>, or <em>presentation</em> are highlighted as the QKSMS-style build when present.</span></div>
+        <div class="pb" id="ghReleasesBody">
+          <div style="font-size:12px;color:var(--tx3);">Open Settings while signed in to load download links.</div>
         </div>
       </div>
       <!-- ── BACKUP & RESTORE (full) ── -->
@@ -2905,13 +2954,20 @@ function importRcptGroup(gid) {
 // ════ SETTINGS VIEW ════
 async function loadSettingsView() {
   loadBackupInfo();
-  // Populate SMTP info from status endpoint
+  // Populate SMTP summary from status endpoint
   fetch('/api/v1/status').then(r=>r.json()).then(d=>{
     if (d.smtp_host) document.getElementById('smtpHost').value = d.smtp_host;
     if (d.smtp_port) document.getElementById('smtpPort').value = d.smtp_port;
     if (d.smtp_from) document.getElementById('smtpFrom').value = d.smtp_from;
     if (d.smtp_user) document.getElementById('smtpUser').value = d.smtp_user;
+    const sum = document.getElementById('smtpSummaryLine');
+    if (sum) {
+      sum.textContent = d.smtp_profile_count
+        ? `${d.smtp_profile_count} profile(s) · routing: ${d.smtp_routing_mode || 'fallback'}`
+        : (d.smtp_configured ? '1 profile (.env)' : 'Not configured');
+    }
   }).catch(()=>{});
+  if (typeof _currentUser !== 'undefined' && _currentUser?.role === 'admin') loadSmtpMulti();
 
   const r = await fetch('/api/v1/settings').then(r=>r.json()).catch(()=>({}));
   const s = r.settings || {};
@@ -2936,6 +2992,70 @@ async function loadSettingsView() {
     if (bh.end) document.getElementById('bhEnd').value = bh.end;
     if (Array.isArray(bh.days)) document.querySelectorAll('.bh-day').forEach(cb => { cb.checked = bh.days.includes(parseInt(cb.value)); });
   } catch(_) {}
+
+  loadGithubReleases();
+  if (window._lastVersionCheck) renderAppVersionPanel(window._lastVersionCheck);
+  else fetch('/api/v1/admin/update-check', { credentials: 'include' }).then(r=>r.json()).then(d => { window._lastVersionCheck = d; renderAppVersionPanel(d); }).catch(()=>{});
+}
+
+async function loadGithubReleases() {
+  const body = document.getElementById('ghReleasesBody');
+  if (!body) return;
+  if (typeof _currentUser === 'undefined' || !_currentUser) {
+    body.innerHTML = '<div style="font-size:12px;color:var(--tx3);">Sign in to load GitHub release downloads.</div>';
+    return;
+  }
+  body.innerHTML = '<div style="font-size:12px;color:var(--tx3);">Loading latest release from GitHub…</div>';
+  try {
+    const r = await fetch('/api/v1/admin/github-releases', { credentials: 'include' });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      body.innerHTML = `<div style="font-size:12px;color:#fca5a5;line-height:1.5;">${esc(d.error || d.message || 'Failed to load releases')}<br><span style="font-size:11px;color:var(--tx3);">Repo: <code style="font-family:var(--fm);">${esc(d.repo || '')}</code> · set <code style="font-family:var(--fm);">GITHUB_REPO</code> in server <code style="font-family:var(--fm);">.env</code> if needed.</span></div>`;
+      return;
+    }
+    if (d.no_releases) {
+      body.innerHTML = `<div style="font-size:12px;color:var(--tx2);line-height:1.6;">No releases on GitHub yet. <a href="${esc(d.html_url || '#')}" target="_blank" rel="noopener" style="color:var(--c1);">Create a release</a> and attach APKs.</div>`;
+      return;
+    }
+    const assets = d.assets || [];
+    const pre = d.is_prerelease ? ' <span style="font-size:10px;color:var(--c7);font-family:var(--fm);">pre-release</span>' : '';
+    let html = `<div style="font-size:12px;color:var(--tx2);margin-bottom:12px;line-height:1.5;">Release <strong style="font-family:var(--fm);">${esc(d.tag || '')}</strong>${pre}`;
+    if (d.published_at) html += ` · ${esc(d.published_at)}`;
+    html += ` · <a href="${esc(d.html_url || '#')}" target="_blank" rel="noopener" style="color:var(--c1);">Open on GitHub</a></div>`;
+
+    if (d.qksms_best) {
+      html += `<div style="margin-bottom:10px;padding:10px;border-radius:8px;background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.2);">
+        <div style="font-size:11px;font-weight:700;color:var(--c7);margin-bottom:6px;">Suggested QKSMS / presentation APK</div>
+        <a class="btn p sm" href="${esc(d.qksms_best.url)}" target="_blank" rel="noopener">⬇ ${esc(d.qksms_best.name)}</a>
+        <span style="font-size:10px;color:var(--tx3);font-family:var(--fm);margin-left:8px;">${((d.qksms_best.size || 0) / 1024 / 1024).toFixed(2)} MB</span>
+      </div>`;
+    }
+    if (d.agent_best) {
+      html += `<div style="margin-bottom:10px;padding:10px;border-radius:8px;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);">
+        <div style="font-size:11px;font-weight:700;color:var(--c1);margin-bottom:6px;">Suggested ApiX Agent APK</div>
+        <a class="btn p sm" href="${esc(d.agent_best.url)}" target="_blank" rel="noopener">⬇ ${esc(d.agent_best.name)}</a>
+        <span style="font-size:10px;color:var(--tx3);font-family:var(--fm);margin-left:8px;">${((d.agent_best.size || 0) / 1024 / 1024).toFixed(2)} MB</span>
+      </div>`;
+    }
+
+    if (!assets.length) {
+      html += '<div style="font-size:12px;color:var(--tx3);line-height:1.6;">No <code style="font-family:var(--fm);">.apk</code> files attached to this release. Attach APKs to the GitHub Release, or download from Actions artifacts / build locally.</div>';
+    } else {
+      html += '<div style="font-size:11px;font-weight:700;color:var(--tx2);margin-bottom:8px;">All APK assets</div><div style="display:flex;flex-direction:column;gap:8px;">';
+      for (const a of assets) {
+        const hint = a.hint ? `<span style="font-size:10px;color:var(--tx3);"> — ${esc(a.hint)}</span>` : '';
+        const mb = ((a.size || 0) / 1024 / 1024).toFixed(2);
+        html += `<div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;font-size:13px;">
+          <a class="btn g sm" href="${esc(a.url)}" target="_blank" rel="noopener">⬇ ${esc(a.name)}</a>
+          <span style="font-size:10px;color:var(--tx3);font-family:var(--fm);">${mb} MB</span>${hint}
+        </div>`;
+      }
+      html += '</div>';
+    }
+    body.innerHTML = html;
+  } catch (e) {
+    body.innerHTML = `<div style="font-size:12px;color:#fca5a5;">${esc(String(e.message || e))}</div>`;
+  }
 }
 
 async function saveTelegramSettings() {
@@ -2992,9 +3112,54 @@ async function saveEnterpriseSetting() {
 async function testSmtp() {
   const el = document.getElementById('smtpTestResult');
   el.textContent = 'Testing…'; el.style.color = 'var(--tx3)';
-  const r = await fetch('/api/auth/smtp-test',{method:'POST'}).then(r=>r.json()).catch(e=>({ok:false,reason:e.message}));
-  if (r.ok) { el.textContent = '✓ Connection successful'; el.style.color = 'var(--c6)'; }
-  else       { el.textContent = '✕ ' + (r.reason||'Failed'); el.style.color = 'var(--err)'; }
+  const r = await fetch('/api/auth/smtp-test', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+    .then(r => r.json()).catch(e => ({ ok: false, reason: e.message }));
+  if (r.ok) { el.textContent = '✓ All SMTP profiles verified'; el.style.color = 'var(--c6)'; }
+  else {
+    const detail = (r.results || []).map(x => `${x.profile_id || '?'}: ${x.ok ? 'ok' : x.reason}`).join(' · ');
+    el.textContent = '✕ ' + (r.reason || 'Failed') + (detail ? ' — ' + detail : '');
+    el.style.color = 'var(--err)';
+  }
+}
+
+async function loadSmtpMulti() {
+  if (typeof _currentUser === 'undefined' || _currentUser?.role !== 'admin') return;
+  const r = await fetch('/api/auth/email-smtp/config', { credentials: 'include' }).then(x => x.json()).catch(() => null);
+  if (!r || r.error) return;
+  const rm = document.getElementById('smtpRoutingMode');
+  if (rm) rm.value = r.routing_mode || 'fallback';
+  const wp = document.getElementById('smtpWarnPct');
+  if (wp) wp.value = r.limit_warn_threshold_pct ?? 80;
+  const ne = document.getElementById('smtpNotifyEmails');
+  if (ne) ne.value = r.admin_notify_emails || '';
+  const ta = document.getElementById('smtpProfilesJson');
+  if (ta) ta.value = JSON.stringify(r.profiles || [], null, 2);
+  const mx = document.getElementById('smtpMaxProfilesN');
+  if (mx && r.max_profiles != null) mx.textContent = String(r.max_profiles);
+}
+
+async function saveSmtpMulti() {
+  let profiles;
+  try { profiles = JSON.parse(document.getElementById('smtpProfilesJson').value || '[]'); }
+  catch { toast('Invalid profiles JSON', 'red'); return; }
+  const body = {
+    profiles,
+    routing_mode: document.getElementById('smtpRoutingMode').value,
+    limit_warn_threshold_pct: parseInt(document.getElementById('smtpWarnPct').value, 10) || 80,
+    admin_notify_emails: document.getElementById('smtpNotifyEmails').value.trim(),
+  };
+  const r = await fetch('/api/auth/email-smtp/config', {
+    method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  }).then(x => x.json());
+  if (r.success) { toast('SMTP config saved'); loadSmtpMulti(); loadSettingsView(); }
+  else toast(r.error || 'Save failed', 'red');
+}
+
+async function loadSmtpUsage() {
+  const el = document.getElementById('smtpUsageOut');
+  const r = await fetch('/api/auth/email-smtp/usage', { credentials: 'include' }).then(x => x.json()).catch(() => null);
+  if (!r || !r.usage) { if (el) el.style.display = 'none'; return; }
+  if (el) { el.style.display = 'block'; el.textContent = JSON.stringify(r, null, 2); }
 }
 
 // ════ BACKUP & RESTORE ════
@@ -4129,19 +4294,115 @@ function toggleTheme() {
 // Apply stored theme immediately (before auth check finishes)
 (()=>{ const t=localStorage.getItem('apix_theme')||'dark'; applyTheme(t); })();
 
-// ════ UPDATE CHECKER ════
+// ════ VERSION / GITHUB UPDATE (semver + pre-releases) ════
+function _settingsNavEl() {
+  return document.querySelector('.sn-item[onclick*="settings"]');
+}
 async function checkForUpdate() {
   try {
-    const d = await fetch('/api/v1/admin/update-check').then(r=>r.json());
-    if (d.update_available) {
-      const b = document.getElementById('updateBadge');
-      if (b) {
-        b.style.display = 'inline-block';
-        b.title = `New version: ${d.latest_version} (current: ${d.current_version})`;
-        b.onclick = () => window.open(d.release_url,'_blank');
-      }
+    const d = await fetch('/api/v1/admin/update-check', { credentials: 'include' }).then(r=>r.json());
+    window._lastVersionCheck = d;
+    applyVersionStatusPill(d);
+    if (document.getElementById('view-settings')?.classList.contains('on')) {
+      renderAppVersionPanel(d);
     }
-  } catch {}
+  } catch (e) {
+    window._lastVersionCheck = { error: 'network', message: e.message };
+    applyVersionStatusPill(window._lastVersionCheck);
+  }
+}
+
+function applyVersionStatusPill(d) {
+  const pill = document.getElementById('versionStatusPill');
+  const dot = document.getElementById('versionStatusDot');
+  const text = document.getElementById('versionStatusText');
+  if (!pill || !dot || !text) return;
+  const v = d.current_version || '?';
+  let bg, bd, fg, label, title, onClick;
+  if (d.error) {
+    bg = 'rgba(245,158,11,.12)'; bd = 'rgba(245,158,11,.38)'; fg = '#fcd34d';
+    label = `v${v} · Update check failed`;
+    title = d.message || d.error || 'Could not reach GitHub';
+    onClick = () => goView('settings', _settingsNavEl());
+  } else if (d.no_releases) {
+    bg = 'rgba(100,116,139,.12)'; bd = 'rgba(100,116,139,.35)'; fg = 'var(--tx2)';
+    label = `v${v} · No releases on GitHub`;
+    title = 'No releases to compare — publish one on your repo.';
+    onClick = () => goView('settings', _settingsNavEl());
+  } else if (d.update_available) {
+    bg = 'rgba(239,68,68,.14)'; bd = 'rgba(239,68,68,.45)'; fg = '#fca5a5';
+    const tgt = d.latest_version || (d.latest_tag || '').replace(/^v/i, '') || '?';
+    label = `v${v} · New: ${tgt}`;
+    title = `Update available: ${d.latest_tag || tgt}${d.is_prerelease ? ' (pre-release)' : ''}. Open release page.`;
+    onClick = () => { if (d.release_url) window.open(d.release_url, '_blank'); else goView('settings', _settingsNavEl()); };
+  } else if (d.local_ahead) {
+    bg = 'rgba(34,211,238,.1)'; bd = 'rgba(34,211,238,.35)'; fg = '#67e8f9';
+    label = `v${v} · Ahead of GitHub`;
+    title = 'This server version is newer than the latest GitHub release (fork or unpublished tag).';
+    onClick = () => goView('settings', _settingsNavEl());
+  } else {
+    bg = 'rgba(16,185,129,.12)'; bd = 'rgba(16,185,129,.4)'; fg = '#6ee7b7';
+    const pre = d.is_prerelease ? ' · pre-release' : '';
+    label = `v${v} · Up to date${pre}`;
+    title = `In sync with ${d.latest_tag || d.latest_version}${d.is_prerelease ? ' (you are on a pre-release line)' : ''}`;
+    onClick = () => goView('settings', _settingsNavEl());
+  }
+  pill.style.display = 'inline-flex';
+  pill.style.background = bg;
+  pill.style.border = `1px solid ${bd}`;
+  text.style.color = fg;
+  dot.style.background = fg;
+  text.textContent = label;
+  pill.title = title;
+  pill.onclick = onClick;
+}
+
+function renderAppVersionPanel(d) {
+  const body = document.getElementById('appVersionPanelBody');
+  const link = document.getElementById('appVersionRepoLink');
+  if (!body) return;
+  if (link && d.github_repo) {
+    const [o, n] = String(d.github_repo).split('/');
+    if (o && n) link.href = `https://github.com/${o}/${n}/releases`;
+  }
+  if (d.error) {
+    body.innerHTML = `<div style="display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;">
+      <div style="width:10px;height:10px;border-radius:50%;margin-top:4px;flex-shrink:0;background:#fcd34d;box-shadow:0 0 0 3px rgba(245,158,11,.2);"></div>
+      <div style="flex:1;min-width:200px;">
+        <div style="font-size:14px;font-weight:700;color:#fcd34d;font-family:var(--fm);margin-bottom:4px;">Could not check GitHub</div>
+        <div style="font-size:12px;color:var(--tx2);line-height:1.55;">${esc(d.message || d.error)}</div>
+        <div style="font-size:11px;color:var(--tx3);margin-top:8px;">Running version <strong style="font-family:var(--fm);color:var(--tx);">v${esc(d.current_version || '?')}</strong> from <code style="font-family:var(--fm);">server/package.json</code></div>
+      </div></div>`;
+    return;
+  }
+  const v = esc(d.current_version || '?');
+  const remote = esc(d.latest_version || (d.latest_tag || '').replace(/^v/i, '') || '—');
+  const tag = esc(d.latest_tag || '');
+  let statusColor, statusLabel, statusDetail;
+  if (d.no_releases) {
+    statusColor = '#94a3b8'; statusLabel = 'No releases published'; statusDetail = 'Create a release on GitHub to enable version comparison.';
+  } else if (d.update_available) {
+    statusColor = '#f87171'; statusLabel = 'Outdated — update available'; statusDetail = `Latest on GitHub: <strong style="font-family:var(--fm);color:var(--tx);">${remote}</strong> (${tag})${d.is_prerelease ? ' <span style="color:var(--c7);">pre-release</span>' : ''}`;
+  } else if (d.local_ahead) {
+    statusColor = '#22d3ee'; statusLabel = 'Local version ahead of GitHub'; statusDetail = 'Your <code style="font-family:var(--fm);">package.json</code> is newer than the newest release (custom fork or tag not published yet).';
+  } else {
+    statusColor = '#34d399'; statusLabel = 'Up to date'; statusDetail = `Matches <strong style="font-family:var(--fm);color:var(--tx);">${tag || remote}</strong>${d.is_prerelease ? ' <span style="font-size:11px;color:var(--c7);">(pre-release channel)</span>' : ''}`;
+  }
+  const pub = d.published_at ? `<div style="font-size:11px;color:var(--tx3);margin-top:6px;">Published: ${esc(d.published_at)}</div>` : '';
+  const btn = d.release_url && d.update_available
+    ? `<a class="btn p sm" href="${esc(d.release_url)}" target="_blank" rel="noopener" style="margin-top:12px;display:inline-flex;">Open release notes</a>` : '';
+  body.innerHTML = `<div style="display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap;">
+    <div style="width:12px;height:12px;border-radius:50%;margin-top:5px;flex-shrink:0;background:${statusColor};box-shadow:0 0 0 4px rgba(255,255,255,.06);"></div>
+    <div style="flex:1;min-width:220px;">
+      <div style="font-size:11px;font-family:var(--fm);text-transform:uppercase;letter-spacing:.12em;color:var(--tx3);margin-bottom:6px;">This server</div>
+      <div style="font-size:22px;font-weight:800;font-family:var(--fm);color:var(--tx);letter-spacing:-.02em;">v${v}</div>
+      <div style="font-size:11px;font-family:var(--fm);text-transform:uppercase;letter-spacing:.12em;color:var(--tx3);margin:14px 0 6px;">GitHub (newest${d.includes_prereleases === false ? ', stable only' : ', incl. RC'})</div>
+      <div style="font-size:15px;font-weight:700;font-family:var(--fm);color:${statusColor};">${statusLabel}</div>
+      <div style="font-size:12px;color:var(--tx2);line-height:1.55;margin-top:6px;">${statusDetail}</div>
+      ${pub}
+      ${btn}
+    </div>
+  </div>`;
 }
 
 // ════ FACTORY RESET ════

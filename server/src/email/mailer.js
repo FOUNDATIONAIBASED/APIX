@@ -1,57 +1,33 @@
 'use strict';
 /**
- * SMTP Mailer
- * Configured via environment variables:
- *   SMTP_HOST     — mail server hostname (required to enable)
- *   SMTP_PORT     — port (default: 587)
- *   SMTP_SECURE   — true = TLS/465, false = STARTTLS (default: false)
- *   SMTP_USER     — login username
- *   SMTP_PASS     — login password
- *   SMTP_FROM     — sender address e.g. "ApiX Gateway <noreply@example.com>"
- *   SMTP_FROM_NAME— friendly name (default: ApiX Gateway)
+ * Transactional email templates + send via multi-SMTP router.
  *
- * Supports: Gmail (smtp.gmail.com:587), Outlook (smtp.office365.com:587),
- *           SendGrid (smtp.sendgrid.net:587), Mailgun, SMTP2GO, any standard SMTP.
- *
- * If SMTP_HOST is not set, mail sending is silently skipped (dev mode).
+ * Legacy single-SMTP .env still works if no DB profiles are configured.
+ * Admin: Settings → Email / SMTP (multi-profile, quotas, routing; max via SMTP_MAX_PROFILES).
  */
-const nodemailer = require('nodemailer');
+const smtpConfig = require('./smtpConfig');
+const smtpRouter = require('./smtpRouter');
+const smtpTransport = require('./smtpTransport');
 
-let _transporter = null;
-
-function getTransporter() {
-    if (_transporter) return _transporter;
-    if (!process.env.SMTP_HOST) return null;
-
-    const rejectUnauthorized = process.env.SMTP_TLS_REJECT_UNAUTHORIZED !== 'false';
-    const pool = process.env.SMTP_POOL === 'true';
-
-    const opts = {
-        host:   process.env.SMTP_HOST,
-        port:   parseInt(process.env.SMTP_PORT || '587', 10),
-        secure: process.env.SMTP_SECURE === 'true',
-        tls:    { rejectUnauthorized },
-        pool,
-    };
-    if (pool) {
-        opts.maxConnections = parseInt(process.env.SMTP_MAX_CONNECTIONS || '5', 10);
-        opts.maxMessages    = parseInt(process.env.SMTP_MAX_MESSAGES    || '100', 10);
-    }
-    if (process.env.SMTP_USER || process.env.SMTP_PASS) {
-        opts.auth = { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS };
-    }
-
-    _transporter = nodemailer.createTransport(opts);
-    return _transporter;
+function firstEffectiveFromEnv() {
+    const p = smtpConfig.envLegacyProfile();
+    if (!p) return { name: 'ApiX Gateway', addr: 'noreply@example.com' };
+    return { name: p.from_name, addr: p.from || p.user || 'noreply@example.com' };
 }
 
 function fromAddress() {
-    const name = process.env.SMTP_FROM_NAME || 'ApiX Gateway';
-    const addr = process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@example.com';
+    const profiles = smtpConfig.getEffectiveProfiles();
+    if (profiles.length) {
+        const p = profiles[0];
+        return smtpTransport.fromHeader(p);
+    }
+    const { name, addr } = firstEffectiveFromEnv();
     return `"${name}" <${addr}>`;
 }
 
 function replyTo() {
+    const profiles = smtpConfig.getEffectiveProfiles();
+    if (profiles[0]?.reply_to) return profiles[0].reply_to;
     return process.env.SMTP_REPLY_TO || undefined;
 }
 
@@ -73,19 +49,8 @@ function logoUrl() {
  * @returns {Promise<boolean>} true = sent, false = skipped (no SMTP config)
  */
 async function send({ to, subject, text, html }) {
-    const t = getTransporter();
-    if (!t) {
-        // Log to console in dev so reset links are visible without SMTP
-        console.info(`[MAIL] No SMTP configured — would send to ${to}: ${subject}`);
-        if (text) console.info('[MAIL]', text);
-        return false;
-    }
     try {
-        const msg = { from: fromAddress(), to, subject, text, html };
-        const rt = replyTo();
-        if (rt) msg.replyTo = rt;
-        await t.sendMail(msg);
-        return true;
+        return await smtpRouter.sendTransactional({ to, subject, text, html });
     } catch (err) {
         console.error('[MAIL] Send error:', err.message);
         throw err;
@@ -188,14 +153,10 @@ async function sendInvite(toEmail, username, oneTimePassword, loginUrl) {
  * Test SMTP connection (admin diagnostic).
  */
 async function testConnection() {
-    const t = getTransporter();
-    if (!t) return { ok: false, reason: 'SMTP not configured' };
-    try {
-        await t.verify();
-        return { ok: true };
-    } catch (err) {
-        return { ok: false, reason: err.message };
-    }
+    const profiles = smtpConfig.getEffectiveProfiles();
+    if (!profiles.length) return { ok: false, reason: 'SMTP not configured' };
+    const r = await smtpRouter.testProfile(profiles[0]);
+    return r.ok ? { ok: true } : { ok: false, reason: r.reason || 'verify failed' };
 }
 
 module.exports = { send, sendPasswordReset, sendWelcome, sendInvite, testConnection };

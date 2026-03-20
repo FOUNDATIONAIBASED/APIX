@@ -7,6 +7,6 @@ class ApiXApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        Log.i("ApiXApplication", "ApiX Agent started")
+        Log.i("ApiXApplication", "Apix CLI started")
     }
 }

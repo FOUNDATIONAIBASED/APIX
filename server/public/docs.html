@@ -116,6 +116,11 @@ code{font-family:var(--fm);font-size:12px;color:var(--c3);background:rgba(34,211
     <div><div class="lname">Api<em>X</em> Docs</div><div class="lver">API Reference v2</div></div>
   </div>
   <nav class="side-nav" id="sideNav">
+    <div class="sn-group">Guide</div>
+    <a href="#server-guide" class="sn-item" onclick="scrollTo('server-guide')">Server &amp; setup</a>
+    <a href="#sessions-auth" class="sn-item" onclick="scrollTo('sessions-auth')">Sessions vs API keys</a>
+    <a href="#examples-cookbook" class="sn-item" onclick="scrollTo('examples-cookbook')">Examples cookbook</a>
+
     <div class="sn-group">Core</div>
     <a href="#auth"      class="sn-item" onclick="scrollTo('auth')">Authentication</a>
     <a href="#status"    class="sn-item" onclick="scrollTo('status')">Status &amp; Health</a>
@@ -149,6 +154,7 @@ code{font-family:var(--fm);font-size:12px;color:var(--c3);background:rgba(34,211
 
     <div class="sn-group">Admin</div>
     <a href="#apikeys"   class="sn-item" onclick="scrollTo('apikeys')">API Keys</a>
+    <a href="#email-smtp" class="sn-item" onclick="scrollTo('email-smtp')">Email / Multi-SMTP</a>
     <a href="#compat"    class="sn-item" onclick="scrollTo('compat')">Twilio Compat</a>
   </nav>
 </aside>
@@ -163,6 +169,114 @@ code{font-family:var(--fm);font-size:12px;color:var(--c3);background:rgba(34,211
     &nbsp;·&nbsp;All endpoints return JSON
   </p>
 
+  <!-- ── GUIDE: SERVER & SETUP ─────────────────────────────── -->
+  <div class="section" id="server-guide">
+    <div class="section-title">🖥️ Server &amp; setup</div>
+    <p class="section-sub">This page documents the <strong>Node.js</strong> gateway shipped in <code>server/</code>. Agents connect over WebSocket; operators use the browser UI at <code>/</code> and this reference at <code>/docs</code>.</p>
+
+    <div class="info green"><div class="info-icon">✅</div>
+      <div><strong>First run:</strong> <code>cd server && npm install && cp .env.example .env</code> — set <code>JWT_SECRET</code> and <code>HMAC_SECRET</code> — then <code>node src/index.js</code> or <code>npm start</code>. Open the UI, complete the setup wizard if prompted, then create API keys under the console.</div></div>
+
+    <div class="ep-section">Check that the process is up</div>
+    <pre>curl -s "$(echo "${BASE:-http://127.0.0.1:3000}")/api/v1/status" | head -c 400</pre>
+    <p class="section-sub" style="margin-top:12px;margin-bottom:8px;">Useful fields include <code>smtp_configured</code>, <code>smtp_profile_count</code>, and <code>smtp_routing_mode</code> when debugging email.</p>
+
+    <div class="ep-section">Where data lives</div>
+    <table class="pt"><thead><tr><th>Item</th><th>Location / notes</th></tr></thead><tbody>
+      <tr><td><code>SQLite</code></td><td>Path from <code>DB_PATH</code> in <code>.env</code> (default <code>./data/apix.db</code>)</td></tr>
+      <tr><td><code>Static UI</code></td><td><code>server/public/index.html</code> (dashboard) · <code>docs.html</code> (this file)</td></tr>
+      <tr><td><code>Multi-SMTP profiles</code></td><td>Stored in settings (see Email section); overrides <code>SMTP_*</code> in <code>.env</code> when any profile exists</td></tr>
+      <tr><td><code>Safe updates</code></td><td><code>./apix.sh</code> option <strong>10</strong> or <code>bash server/scripts/apix-update.sh</code> — backups under <code>server/.apix-backups/updates/&lt;timestamp&gt;/</code> (<code>update.log</code>, <code>update-error.log</code> on failure; auto-revert git + data)</td></tr>
+    </tbody></table>
+
+    <div class="ep-section">GitHub release APKs (signed-in UI)</div>
+    <pre>GET /api/v1/admin/github-releases
+Cookie: apix_session=…   # any logged-in user
+
+# Returns assets for the same “newest” release as update-check (semver ordering).
+# Pre-releases (e.g. v0.0.1-rc1) count as newest when they sort above stable tags.
+# Repo: GITHUB_REPO · GITHUB_RELEASES_STABLE_ONLY=true ignores prerelease releases.</pre>
+
+    <div class="ep-section">Version check vs GitHub (semver + RC)</div>
+    <pre>GET /api/v1/admin/update-check
+Cookie: apix_session=…
+
+# Response highlights:
+#   current_version   — from server/package.json
+#   latest_version    — normalized semver from newest GitHub tag
+#   latest_tag        — raw tag (e.g. v0.0.3-rc1)
+#   is_prerelease     — GitHub prerelease flag for that release
+#   update_available  — true if latest > current (semver)
+#   local_ahead       — true if current > latest (fork / unpublished)
+#   up_to_date        — in sync with newest compared release
+#   includes_prereleases — false when GITHUB_RELEASES_STABLE_ONLY=true</pre>
+  </div>
+
+  <!-- ── GUIDE: SESSIONS VS API KEYS ───────────────────────── -->
+  <div class="section" id="sessions-auth">
+    <div class="section-title">👤 Sessions vs API keys</div>
+    <p class="section-sub">Use the right credential for the job — mixing them up is the most common integration mistake.</p>
+
+    <table class="pt"><thead><tr><th>Credential</th><th>Typical use</th><th>How it’s sent</th></tr></thead><tbody>
+      <tr><td><strong>Session cookie</strong></td><td>Web console; <strong>admin-only</strong> routes such as <code>/api/auth/email-smtp/*</code></td><td>Browser stores <code>apix_session</code> after login; or send the session token if your client supports it</td></tr>
+      <tr><td><strong>API key</strong></td><td>Scripts, backends, mobile apps calling <code>/api/v1/...</code></td><td><code>X-API-Key</code> or <code>Authorization: Bearer &lt;key&gt;</code></td></tr>
+    </tbody></table>
+
+    <div class="ep-section">Log in and capture the session cookie (<code>curl</code>)</div>
+    <pre># Replace host and credentials
+BASE="http://127.0.0.1:3000"
+curl -s -c apix_cookies.txt -X POST "$BASE/api/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"your-password"}'
+
+# Use the cookie on admin routes
+curl -s -b apix_cookies.txt "$BASE/api/auth/me"</pre>
+
+    <div class="info warn"><div class="info-icon">🔐</div>
+      <div>If the user has <strong>2FA</strong> enabled, <code>POST /api/auth/login</code> returns <code>requires_2fa: true</code> and a <code>challenge_token</code> (no session cookie yet). Complete login with:<br>
+      <code>POST /api/auth/2fa/verify</code> · body <code>{"token":"&lt;challenge_token&gt;","code":"123456"}</code> — on success the response sets <code>apix_session</code> like a normal login.</div></div>
+  </div>
+
+  <!-- ── GUIDE: EXAMPLES COOKBOOK ──────────────────────────── -->
+  <div class="section" id="examples-cookbook">
+    <div class="section-title">📖 Examples cookbook</div>
+    <p class="section-sub">Copy, paste, replace host and keys. In <strong>production</strong> mode, never put API keys in URLs.</p>
+
+    <pre style="margin-bottom:16px">BASE="http://127.0.0.1:3000"   # your gateway URL</pre>
+
+    <div class="ep-section">Send one SMS (API key)</div>
+    <pre>curl -s -X POST "$BASE/api/v1/messages/send" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: apix_your_key_here" \
+  -d '{"to":"+15551234567","body":"Hello from ApiX"}'</pre>
+
+    <div class="ep-section">Same call with Bearer token</div>
+    <pre>curl -s -X POST "$BASE/api/v1/messages/send" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer apix_your_key_here" \
+  -d '{"to":"+15551234567","body":"Hello"}'</pre>
+
+    <div class="ep-section">JavaScript <code>fetch</code> (browser or Node 18+)</div>
+    <pre>const BASE = location.origin; // or your server URL
+const API_KEY = 'apix_...';
+
+const r = await fetch(`${BASE}/api/v1/messages/send`, {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'X-API-Key': API_KEY,
+  },
+  body: JSON.stringify({ to: '+15551234567', body: 'Hello from fetch' }),
+});
+console.log(await r.json());</pre>
+
+    <div class="ep-section">Create an API key (first key on fresh install — no auth)</div>
+    <pre>curl -s -X POST "$BASE/api/v1/apikeys" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"CI Bot","permissions":["*"]}'
+# Response includes "key" once — store it safely</pre>
+  </div>
+
   <!-- ── AUTH ──────────────────────────────────────────────── -->
   <div class="section" id="auth">
     <div class="section-title">🔑 Authentication</div>
@@ -170,8 +284,16 @@ code{font-family:var(--fm);font-size:12px;color:var(--c3);background:rgba(34,211
 
     <div class="info">
       <div class="info-icon">ℹ️</div>
-      <div>Pass the API key in the <code>X-API-Key</code> header, or as <code>Authorization: Bearer &lt;key&gt;</code>, or as <code>?api_key=&lt;key&gt;</code> query parameter.</div>
+      <div>Pass the API key in the <code>X-API-Key</code> header, or as <code>Authorization: Bearer &lt;key&gt;</code>. You may also use <code>?api_key=&lt;key&gt;</code> in <strong>homelab</strong> mode — see below.</div>
     </div>
+
+    <div class="ep-section">Deployment mode: homelab vs production</div>
+    <table class="pt"><thead><tr><th>Setting</th><th>Homelab (default)</th><th>Production</th></tr></thead><tbody>
+      <tr><td><code>DEPLOYMENT_MODE</code> / Settings</td><td><code>homelab</code></td><td><code>production</code></td></tr>
+      <tr><td>CORS</td><td>Permissive for local tooling</td><td>Only origins listed in <code>CORS_ORIGINS</code></td></tr>
+      <tr><td><code>?api_key=</code> on URLs</td><td>Allowed (quick tests)</td><td><strong>Blocked</strong> — use headers only</td></tr>
+      <tr><td>Session cookie <code>Secure</code></td><td>Set when request is HTTPS or <code>USE_SSL=true</code></td><td>Use HTTPS in front; set <code>USE_SSL=true</code> behind a proxy</td></tr>
+    </tbody></table>
 
     <div class="ep-section">Example Request</div>
     <pre>curl -X POST http://localhost:3000/api/v1/messages/send \
@@ -218,7 +340,14 @@ curl -X POST http://localhost:3000/api/v1/apikeys \
   "messages": { "sent": 142, "received": 38, "failed": 2, "outbound_total": 150 },
   "devices": { "total": 4, "online": 3, "pending": 1, "approved": 3 },
   "campaigns": { "total": 5, "running": 2 },
-  "llm": { "instances": 2, "healthy": 2 }
+  "llm": { "instances": 2, "healthy": 2 },
+  "smtp_configured": true,
+  "smtp_profile_count": 2,
+  "smtp_routing_mode": "fallback",
+  "smtp_host": "smtp.example.com",
+  "smtp_port": "587",
+  "smtp_from": "noreply@example.com",
+  "smtp_user": "n***@example.com"
 }</pre>
       </div>
     </div>
@@ -759,6 +888,162 @@ optout:received</pre>
         <span class="ep-desc">Revoke an API key (disable without deleting)</span>
       </div>
       <div class="ep-body"><pre>{ "success": true, "message": "API key revoked." }</pre></div>
+    </div>
+  </div>
+
+  <!-- ── EMAIL / MULTI-SMTP (session, admin) ─────────────────────────── -->
+  <div class="section" id="email-smtp">
+    <div class="section-title">📧 Email / Multi-SMTP</div>
+    <p class="section-sub">Session cookie auth (<code>apix_session</code>) · <strong>admin only</strong>. Configure multiple outbound SMTP identities with per-window quotas (UTC), routing, and quota warning emails to admins.</p>
+    <div class="info warn"><div class="info-icon">⚠️</div>
+      <div>Max profiles default <strong>25</strong>, cap <strong>100</strong> — set <code>SMTP_MAX_PROFILES</code> in server <code>.env</code>. If <strong>any</strong> profile is saved in the database, legacy <code>SMTP_*</code> env vars are <strong>not</strong> used for sending.</div></div>
+
+    <div class="ep-section">Concepts (read this first)</div>
+    <ul style="font-size:13px;color:var(--tx2);line-height:1.7;margin:0 0 20px 18px">
+      <li><strong>Profile</strong> — One SMTP endpoint (host, credentials, from-address, optional quotas).</li>
+      <li><strong>Routing</strong> — How the server picks which profile sends the next mail: <code>fallback</code> (by <code>priority</code>, skip exhausted or failing profiles), <code>round_robin</code>, or <code>least_used</code> (fewest sends in the current UTC hour).</li>
+      <li><strong>Limits</strong> — Per profile, per window: <code>hourly</code>, <code>daily</code>, <code>weekly</code>, <code>monthly</code>. Use <code>0</code> for <em>unlimited</em> in that window. All buckets are <strong>UTC</strong>.</li>
+      <li><strong>Warnings</strong> — When usage crosses <code>limit_warn_threshold_pct</code> (default 80%) or a cap is hit, admins can receive email (deduped). Extra addresses: <code>admin_notify_emails</code>; plus admins with an email on their user record.</li>
+    </ul>
+
+    <div class="ep-section">Profile object — field reference</div>
+    <table class="pt"><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+      <tr><td><code>id</code></td><td>string</td><td>Stable id (e.g. <code>primary</code>); used in <code>profile_id</code> for targeted tests</td></tr>
+      <tr><td><code>enabled</code></td><td>boolean</td><td><code>false</code> skips the profile entirely</td></tr>
+      <tr><td><code>name</code></td><td>string</td><td>Human label in UI/logs</td></tr>
+      <tr><td><code>host</code> / <code>port</code></td><td>string / number</td><td>SMTP server; port defaults to <code>587</code> if omitted</td></tr>
+      <tr><td><code>secure</code></td><td>boolean</td><td>Typically <code>false</code> on 587 + STARTTLS; <code>true</code> for implicit TLS (e.g. 465) if your provider requires it</td></tr>
+      <tr><td><code>user</code> / <code>pass</code></td><td>string</td><td>Auth credentials (passwords are masked in <code>GET</code> responses)</td></tr>
+      <tr><td><code>from</code></td><td>string</td><td>Envelope / default From address</td></tr>
+      <tr><td><code>from_name</code></td><td>string</td><td>Display name (default <code>ApiX Gateway</code>)</td></tr>
+      <tr><td><code>reply_to</code></td><td>string</td><td>Optional Reply-To</td></tr>
+      <tr><td><code>pool</code></td><td>boolean</td><td>Connection pooling hint for nodemailer transport</td></tr>
+      <tr><td><code>tls_reject_unauthorized</code></td><td>boolean</td><td>Default <code>true</code>; set <code>false</code> only for dev/labs with self-signed SMTP</td></tr>
+      <tr><td><code>priority</code></td><td>number</td><td>Lower runs earlier in <strong>fallback</strong> mode (ties broken by array order)</td></tr>
+      <tr><td><code>limits</code></td><td>object</td><td><code>{ hourly, daily, weekly, monthly }</code> — each <code>0</code> = unlimited</td></tr>
+    </tbody></table>
+
+    <div class="ep-section">End-to-end: login → save config → test (<code>curl</code>)</div>
+    <pre>BASE="http://127.0.0.1:3000"
+COOKIE_JAR="apix_cookies.txt"
+
+# 1) Admin login (stores apix_session)
+curl -s -c "$COOKIE_JAR" -X POST "$BASE/api/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"YOUR_PASSWORD"}'
+
+# 2) Replace profiles with your real SMTP (example: two lanes)
+curl -s -b "$COOKIE_JAR" -X PUT "$BASE/api/auth/email-smtp/config" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "routing_mode": "fallback",
+    "limit_warn_threshold_pct": 80,
+    "admin_notify_emails": "ops@example.com",
+    "profiles": [
+      {
+        "id": "main",
+        "enabled": true,
+        "name": "Primary SMTP",
+        "host": "smtp.example.com",
+        "port": 587,
+        "secure": false,
+        "user": "smtp-user",
+        "pass": "smtp-secret",
+        "from": "noreply@example.com",
+        "from_name": "ApiX Gateway",
+        "priority": 10,
+        "limits": { "hourly": 50, "daily": 500, "weekly": 0, "monthly": 0 }
+      }
+    ]
+  }'
+
+# 3) Inspect masked config + max_profiles
+curl -s -b "$COOKIE_JAR" "$BASE/api/auth/email-smtp/config" | head -c 800
+
+# 4) Usage vs limits
+curl -s -b "$COOKIE_JAR" "$BASE/api/auth/email-smtp/usage"
+
+# 5) Send test mail through all enabled profiles (or one)
+curl -s -b "$COOKIE_JAR" -X POST "$BASE/api/auth/email-smtp/test" \
+  -H "Content-Type: application/json" -d '{}'
+curl -s -b "$COOKIE_JAR" -X POST "$BASE/api/auth/email-smtp/test" \
+  -H "Content-Type: application/json" -d '{"profile_id":"main"}'</pre>
+
+    <div class="ep-section">Save config from the browser (admin already logged in)</div>
+    <pre>// Run from the same origin as the dashboard (session cookie sent automatically)
+await fetch('/api/auth/email-smtp/config', {
+  method: 'PUT',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    routing_mode: 'round_robin',
+    limit_warn_threshold_pct: 75,
+    admin_notify_emails: 'a@b.com, c@d.com',
+    profiles: [
+      /* ...same shape as curl example... */
+    ],
+  }),
+});</pre>
+
+    <div class="info"><div class="info-icon">ℹ️</div>
+      <div><strong>Security:</strong> SMTP passwords are stored in the database as part of settings (same practical model as other server-side secrets). Restrict access to the SQLite file and backups. Prefer app passwords or scoped SMTP credentials from your provider.</div></div>
+
+    <div class="endpoint">
+      <div class="ep-head" onclick="toggle(this)">
+        <span class="ep-method get">GET</span>
+        <span class="ep-path">/api/auth/email-smtp/config</span>
+        <span class="ep-desc">Profiles (passwords masked), routing mode, notify threshold</span>
+      </div>
+      <div class="ep-body open">
+        <pre>{
+  "profiles": [{ "id": "p1", "host": "smtp.gmail.com", "pass": "********", "limits": { "hourly": 100, "daily": 0 }, ... }],
+  "routing_mode": "fallback",
+  "limit_warn_threshold_pct": 80,
+  "admin_notify_emails": "ops@example.com",
+  "using_env_fallback": false,
+  "max_profiles": 25
+}</pre>
+      </div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-head" onclick="toggle(this)">
+        <span class="ep-method put">PUT</span>
+        <span class="ep-path">/api/auth/email-smtp/config</span>
+        <span class="ep-desc">Save profiles JSON + routing + threshold + extra notify emails</span>
+      </div>
+      <div class="ep-body">
+        <pre>{
+  "profiles": [ ... ],
+  "routing_mode": "fallback",
+  "limit_warn_threshold_pct": 80,
+  "admin_notify_emails": "a@b.com, c@d.com"
+}
+// routing_mode: "fallback" | "round_robin" | "least_used"
+// limits: use 0 for unlimited (hourly, daily, weekly, monthly)</pre>
+      </div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-head" onclick="toggle(this)">
+        <span class="ep-method get">GET</span>
+        <span class="ep-path">/api/auth/email-smtp/usage</span>
+        <span class="ep-desc">Per-profile send counts vs limits</span>
+      </div>
+      <div class="ep-body"><pre>{ "usage": [ { "profile": {...}, "ok": true, "periods": { "hourly": { "used": 5, "limit": 100, "remaining": 95 } } } ], "routing_mode": "fallback" }</pre></div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-head" onclick="toggle(this)">
+        <span class="ep-method post">POST</span>
+        <span class="ep-path">/api/auth/email-smtp/test</span>
+        <span class="ep-desc">Verify SMTP (optional body <code>{"profile_id":"p1"}</code>)</span>
+      </div>
+      <div class="ep-body"><pre>{ "ok": true, "results": [{ "ok": true, "profile_id": "p1" }] }</pre></div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-head" onclick="toggle(this)">
+        <span class="ep-method post">POST</span>
+        <span class="ep-path">/api/auth/smtp-test</span>
+        <span class="ep-desc">Legacy alias — tests all profiles (or one with <code>profile_id</code>)</span>
+      </div>
+      <div class="ep-body"><pre>{}</pre></div>
     </div>
   </div>
 

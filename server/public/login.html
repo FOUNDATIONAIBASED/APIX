@@ -158,6 +158,12 @@ input::placeholder{color:var(--tx3);}
       <div class="field"><label>Username</label><input type="text" id="setupUser" placeholder="admin" oninput="updateAvatar()" autocomplete="username"></div>
       <div class="field"><label>Display Name <span style="color:var(--tx3)">(optional)</span></label><input type="text" id="setupDisplay" placeholder="Your Name" oninput="updateAvatar()"></div>
       <div class="field"><label>Email <span style="color:var(--tx3)">(optional)</span></label><input type="email" id="setupEmail" placeholder="admin@company.com"></div>
+      <div class="field">
+        <label>Deployment mode</label>
+        <div style="font-size:12px;color:var(--tx3);margin-bottom:10px;line-height:1.4;">Homelab: relaxed CORS, API keys may use <code style="font-size:11px;">?api_key=</code>. Production: allow only origins in <code style="font-size:11px;">CORS_ORIGINS</code>; use <code style="font-size:11px;">X-API-Key</code> header only.</div>
+        <label style="display:flex;align-items:center;gap:10px;font-weight:500;cursor:pointer;"><input type="radio" name="depMode" value="homelab" checked> Homelab / LAN</label>
+        <label style="display:flex;align-items:center;gap:10px;font-weight:500;margin-top:8px;cursor:pointer;"><input type="radio" name="depMode" value="production"> Production</label>
+      </div>
       <button class="btn-primary" onclick="nextStep(2)">Continue →</button>
     </div>
 
@@ -270,10 +276,13 @@ async function doSetup() {
   const btn = document.getElementById('setupBtn');
   btn.disabled = true; btn.textContent = 'Creating account…';
 
+  const depEl = document.querySelector('input[name="depMode"]:checked');
+  const deployment_mode = depEl ? depEl.value : 'homelab';
+
   const r = await fetch('/api/auth/setup', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({username, password, email: email||null, display_name: display_name||null})
+    body: JSON.stringify({username, password, email: email||null, display_name: display_name||null, deployment_mode})
   }).then(r=>r.json()).catch(e=>({error:e.message}));
 
   if (r.success) {

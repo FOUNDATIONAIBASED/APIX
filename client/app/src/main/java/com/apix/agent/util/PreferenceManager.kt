@@ -58,6 +58,11 @@ class PreferenceManager(context: Context) {
         get() = prefs.getInt(KEY_HEARTBEAT, 30)
         set(v) = prefs.edit().putInt(KEY_HEARTBEAT, v).apply()
 
+    /** Show connection debug lines in Log → Debug tab */
+    var debugUiLogs: Boolean
+        get() = prefs.getBoolean(KEY_DEBUG_UI_LOGS, false)
+        set(v) = prefs.edit().putBoolean(KEY_DEBUG_UI_LOGS, v).apply()
+
     // ── Stats ─────────────────────────────────────────────────
     var sentToday: Int
         get() = prefs.getInt(KEY_SENT_TODAY, 0)
@@ -112,5 +117,6 @@ class PreferenceManager(context: Context) {
         private const val KEY_LAST_STAT_RESET  = "last_stat_reset"
         private const val KEY_PAIRING_TOKEN    = "pairing_token"
         private const val KEY_QR_WS_URLS       = "qr_ws_urls"
+        private const val KEY_DEBUG_UI_LOGS    = "debug_ui_logs"
     }
 }
