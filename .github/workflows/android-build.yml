@@ -215,14 +215,12 @@ jobs:
           gradle-version: wrapper
           add-job-summary: true
 
+      # Space-separated list (one `packages` value). Multiline YAML mistakes break sdkmanager (single bogus package name).
       - name: Set up Android SDK (matches test/qksms compileSdk 33)
         uses: android-actions/setup-android@v3
         with:
           log-accepted-android-sdk-licenses: true
-          packages: |
-            platform-tools
-            platforms;android-33
-            build-tools;33.0.2
+          packages: 'platform-tools platforms;android-33 build-tools;33.0.2'
 
       - name: Grant execute permission to gradlew
         working-directory: test/qksms
