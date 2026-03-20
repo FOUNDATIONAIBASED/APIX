@@ -26,6 +26,7 @@ import com.moez.QKSMS.feature.contacts.ContactsActivity
 import com.moez.QKSMS.feature.contacts.ContactsActivityModule
 import com.moez.QKSMS.feature.conversationinfo.ConversationInfoActivity
 import com.moez.QKSMS.feature.gateway.GatewayActivity
+import com.moez.QKSMS.feature.gateway.GatewayQrScanActivity
 import com.moez.QKSMS.feature.gallery.GalleryActivity
 import com.moez.QKSMS.feature.gallery.GalleryActivityModule
 import com.moez.QKSMS.feature.main.MainActivity
@@ -77,6 +78,10 @@ abstract class ActivityBuilderModule {
     @ActivityScope
     @ContributesAndroidInjector(modules = [])
     abstract fun bindGatewayActivity(): GatewayActivity
+
+    @ActivityScope
+    @ContributesAndroidInjector(modules = [])
+    abstract fun bindGatewayQrScanActivity(): GatewayQrScanActivity
 
     @ActivityScope
     @ContributesAndroidInjector(modules = [NotificationPrefsActivityModule::class])

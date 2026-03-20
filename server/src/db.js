@@ -611,6 +611,11 @@ function migrate(db) {
         CREATE INDEX IF NOT EXISTS idx_messages_apikey ON messages(api_key_prefix);
     `);
 
+    // Older WS handler briefly set devices.status = 'online', which breaks dispatch (expects approved/pending)
+    try {
+        _db.prepare("UPDATE devices SET status = 'approved' WHERE status = 'online'").run();
+    } catch (_) { /* ignore */ }
+
     // Migrations for existing installs — ignore errors on already-existing columns
     const alterCols = [
         "ALTER TABLE messages ADD COLUMN error_code TEXT",

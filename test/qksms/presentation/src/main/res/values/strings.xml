@@ -88,6 +88,12 @@
     <string name="gateway_save">Save</string>
     <string name="gateway_status">Saved. Foreground relay shows connection in the notification. (%s)</string>
     <string name="gateway_status_hint_saved">settings saved</string>
+    <string name="gateway_scan_qr_title">Scan gateway QR</string>
+    <string name="gateway_scan_qr">Scan QR from server</string>
+    <string name="gateway_scan_qr_instruction">Point the camera at the QR shown in ApiX Gateway → Devices → Pair New Device via QR</string>
+    <string name="gateway_qr_invalid">Invalid QR — need ApiX pairing JSON (urls + token)</string>
+    <string name="gateway_qr_ok">Gateway settings saved from QR</string>
+    <string name="gateway_qr_need_camera">Camera permission is required to scan the QR code</string>
     <string name="gateway_notif_channel">ApiX gateway</string>
     <string name="gateway_notif_title">ApiX SMS relay</string>
     <string name="gateway_notif_connected">Connected</string>

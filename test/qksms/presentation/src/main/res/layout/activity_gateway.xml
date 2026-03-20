@@ -79,10 +79,17 @@
                 android:text="@string/gateway_use_tls" />
 
             <Button
-                android:id="@+id/gatewaySave"
+                android:id="@+id/gatewayScanQr"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
+                android:text="@string/gateway_scan_qr" />
+
+            <Button
+                android:id="@+id/gatewaySave"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
                 android:text="@string/gateway_save" />
 
             <Button

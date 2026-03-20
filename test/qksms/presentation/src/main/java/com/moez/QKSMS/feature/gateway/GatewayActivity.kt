@@ -10,6 +10,7 @@
  */
 package com.moez.QKSMS.feature.gateway
 
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import com.moez.QKSMS.R
@@ -20,6 +21,10 @@ import kotlinx.android.synthetic.main.activity_gateway.*
 class GatewayActivity : QkThemedActivity() {
 
     private lateinit var gatewayPrefs: GatewayPreferences
+
+    companion object {
+        private const val REQ_QR_SCAN = 4402
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         AndroidInjection.inject(this)
@@ -34,6 +39,10 @@ class GatewayActivity : QkThemedActivity() {
         gatewayToken.setText(gatewayPrefs.deviceToken ?: "")
         gatewayPairing.setText(gatewayPrefs.pairingToken ?: "")
         gatewayTls.isChecked = gatewayPrefs.useTls
+
+        gatewayScanQr.setOnClickListener {
+            startActivityForResult(Intent(this, GatewayQrScanActivity::class.java), REQ_QR_SCAN)
+        }
 
         gatewaySave.setOnClickListener { savePrefs() }
         gatewayStart.setOnClickListener {
@@ -55,6 +64,18 @@ class GatewayActivity : QkThemedActivity() {
     override fun onResume() {
         super.onResume()
         refreshStatusText()
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQ_QR_SCAN && resultCode == RESULT_OK) {
+            gatewayPrefs = GatewayPreferences(this)
+            gatewayHost.setText(gatewayPrefs.serverHost ?: "")
+            gatewayPort.setText(gatewayPrefs.serverPort.toString())
+            gatewayPairing.setText(gatewayPrefs.pairingToken ?: "")
+            gatewayTls.isChecked = gatewayPrefs.useTls
+            Toast.makeText(this, R.string.gateway_qr_ok, Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun savePrefs() {

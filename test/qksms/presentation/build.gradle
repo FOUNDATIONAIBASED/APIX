@@ -184,6 +184,9 @@ dependencies {
     implementation "com.f2prateek.rx.preferences2:rx-preferences:$rx_preferences_version"
     implementation "com.google.android.flexbox:flexbox:3.0.0"
     implementation "com.google.code.gson:gson:2.8.9"
+    // ApiX gateway QR pairing (same payload as management UI → Devices → Pair)
+    implementation "com.journeyapps:zxing-android-embedded:4.3.0"
+    implementation "com.google.zxing:core:3.5.3"
     implementation "com.jakewharton.timber:timber:$timber_version"
     implementation "com.squareup.moshi:moshi-kotlin:$moshi_version"
     implementation "me.leolin:ShortcutBadger:1.1.22"

@@ -88,8 +88,12 @@ function handleConnection(ws, req, emitter) {
                 if (existing) {
                     deviceId = existing.id;
                     clients.set(deviceId, ws);
-                    Devices.updateStatus(deviceId, 'online');
+                    // Do NOT set status to "online" — DB uses pending|approved|suspended only.
+                    // "online" breaks outbound dispatch (scheduler filters status === 'approved').
                     if (msg.sims?.length) Devices.upsertSims(deviceId, msg.sims);
+                    try {
+                        getDb().prepare("UPDATE devices SET last_seen=datetime('now') WHERE id=?").run(deviceId);
+                    } catch (_) { /* ignore */ }
                     ws.send(JSON.stringify({ type: 'registered', deviceId, token: existing.token }));
                     emitter.emit('device:online', { deviceId });
                     console.log(`[WS] Device re-registered: ${deviceId}`);

@@ -90,3 +90,7 @@
     <init>(...);
     <fields>;
 }
+
+# ZXing (gateway QR scan)
+-keep class com.google.zxing.** { *; }
+-keep class com.journeyapps.barcodescanner.** { *; }
