@@ -13,6 +13,10 @@ concurrency:
   group: codeql-${{ github.ref }}
   cancel-in-progress: true
 
+# Opt into Node.js 24 for JS-based actions (checkout, setup-node, etc.) — see GitHub Actions changelog.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 permissions:
   contents: read
   security-events: write
@@ -61,7 +65,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@v4
         with:
           languages: ${{ matrix.language }}
           config-file: ./.github/codeql/codeql-config.yml
@@ -74,9 +78,9 @@ jobs:
         run: npm ci
 
       - name: Autobuild
-        uses: github/codeql-action/autobuild@v3
+        uses: github/codeql-action/autobuild@v4
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@v4
         with:
           category: "/language:${{ matrix.language }}"
