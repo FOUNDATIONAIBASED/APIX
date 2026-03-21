@@ -642,7 +642,7 @@ Workflow: [`.github/workflows/android-build.yml`](.github/workflows/android-buil
 - **Branch pushes (`main` / `master`):** Builds both jobs and uploads APKs as **workflow artifacts** (no GitHub Release). Use this for continuous verification after merges.
 - **Releases:** Pushing a tag `v*` runs the same builds **and** the `release` job, which attaches APKs to a **GitHub Release**.
 - **Manual runs:** `workflow_dispatch` builds artifacts (version `dev-<sha>` unless the run is tied to a tag).
-- **Note:** [Code scanning](.github/workflows/codeql.yml) (CodeQL) only analyzes the **Node** gateway in `server/`; it does not build Android clients.
+- **Note:** [Code scanning](.github/workflows/codeql.yml) (CodeQL) analyzes the **Node** gateway (see [code scanning notes](docs/code-scanning.md)); it does not build Android clients.
 - **QKSMS signing:** Debug builds use the default debug keystore on the runner. Release signing in CI only applies when a `test/qksms/keystore` file is present and env vars are set (see `test/qksms/presentation/build.gradle` when `CI=true`).
 
 ---

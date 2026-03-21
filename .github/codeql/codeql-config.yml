@@ -1,4 +1,8 @@
-# Used with source-root: server in the workflow — only ignore noise under that tree.
+# Used with source-root: server in the workflow.
+# Ignore server/public (large SPA index.html): the js/missing-token-validation query can
+# match 100+ locations in one file and hit GitHub SARIF “related locations” limits per alert.
+# Gateway logic and API routes live under server/src/.
 name: apix-gateway
 paths-ignore:
   - "**/node_modules/**"
+  - "server/public/**"

@@ -28,7 +28,8 @@ import java.net.URI
 class GatewayQrScanActivity : QkThemedActivity() {
 
     private lateinit var barcodeView: DecoratedBarcodeView
-    private lateinit var prefs: GatewayPreferences
+    /** Gateway settings (distinct from [QkThemedActivity.prefs] which is theme [Preferences]). */
+    private lateinit var gatewayPrefs: GatewayPreferences
     private var scanning = true
 
     companion object {
@@ -42,7 +43,7 @@ class GatewayQrScanActivity : QkThemedActivity() {
         showBackButton(true)
         title = getString(R.string.gateway_scan_qr_title)
 
-        prefs = GatewayPreferences(this)
+        gatewayPrefs = GatewayPreferences(this)
         barcodeView = findViewById(R.id.gatewayBarcodeView)
 
         findViewById<android.view.View>(R.id.gatewayQrCancel).setOnClickListener { finish() }
@@ -86,11 +87,11 @@ class GatewayQrScanActivity : QkThemedActivity() {
             val scheme = uri.scheme ?: "ws"
             val wsPort = if (uri.port > 0) uri.port else portHint
 
-            prefs.serverHost = host
-            prefs.serverPort = wsPort
-            prefs.useTls = scheme.equals("wss", ignoreCase = true)
+            gatewayPrefs.serverHost = host
+            gatewayPrefs.serverPort = wsPort
+            gatewayPrefs.useTls = scheme.equals("wss", ignoreCase = true)
             if (!token.isNullOrBlank()) {
-                prefs.pairingToken = token
+                gatewayPrefs.pairingToken = token
             }
 
             Toast.makeText(this, R.string.gateway_qr_ok, Toast.LENGTH_SHORT).show()
