@@ -30,6 +30,7 @@ A self-hosted, enterprise-grade SMS/MMS gateway that orchestrates a fleet of And
 - [REST API Quick Reference](#rest-api-quick-reference)
 - [CI/CD & GitHub Actions](#cicd--github-actions)
 - [Architecture](#architecture)
+- [n8n + webhooks (recipe)](docs/n8n-webhook-recipe.md)
 
 ---
 

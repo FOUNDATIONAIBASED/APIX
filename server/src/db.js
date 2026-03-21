@@ -602,6 +602,11 @@ function migrate(db) {
         "ALTER TABLE devices ADD COLUMN app_version TEXT",
         "ALTER TABLE devices ADD COLUMN user_id TEXT",
         "ALTER TABLE users ADD COLUMN must_change_password INTEGER DEFAULT 0",
+        "ALTER TABLE imap_accounts ADD COLUMN last_sync_error TEXT",
+        "ALTER TABLE users ADD COLUMN last_sms_forward_error TEXT",
+        "ALTER TABLE users ADD COLUMN last_sms_forward_error_at TEXT",
+        "ALTER TABLE users ADD COLUMN last_imap_rule_error TEXT",
+        "ALTER TABLE users ADD COLUMN last_imap_rule_error_at TEXT",
     ];
     for (const sql of safeCols) {
         try { _db.prepare(sql).run(); } catch (_) { /* already exists */ }
@@ -1349,7 +1354,7 @@ const ImapAccounts = {
     }),
     update: (id, userId, r) => {
         const sets = []; const vals = { id, user_id: userId };
-        const map = ['name', 'host', 'port', 'username', 'password_enc', 'tls', 'mailbox', 'poll_interval_sec', 'enabled', 'last_uid', 'last_sync_at'];
+        const map = ['name', 'host', 'port', 'username', 'password_enc', 'tls', 'mailbox', 'poll_interval_sec', 'enabled', 'last_uid', 'last_sync_at', 'last_sync_error'];
         for (const k of map) {
             if (r[k] !== undefined) {
                 sets.push(`${k}=@${k}`);
@@ -1740,6 +1745,23 @@ const Users = {
     },
     recordLogin: (id, ip) => getDb().prepare("UPDATE users SET last_login=datetime('now'),login_count=login_count+1 WHERE id=?").run(id),
     delete: (id) => getDb().prepare('DELETE FROM users WHERE id=?').run(id),
+
+    /** Last error from inbound SMS → Telegram/SMS forwarding rules (Telegram API / dispatch). */
+    setLastSmsForwardError: (userId, msg) => {
+        const m = String(msg || '').slice(0, 1000);
+        getDb().prepare(`UPDATE users SET last_sms_forward_error=?, last_sms_forward_error_at=datetime('now') WHERE id=?`).run(m, userId);
+    },
+    clearSmsForwardError: (userId) => {
+        getDb().prepare(`UPDATE users SET last_sms_forward_error=NULL, last_sms_forward_error_at=NULL WHERE id=?`).run(userId);
+    },
+    /** Last error from IMAP → Telegram/SMS rule application. */
+    setLastImapRuleError: (userId, msg) => {
+        const m = String(msg || '').slice(0, 1000);
+        getDb().prepare(`UPDATE users SET last_imap_rule_error=?, last_imap_rule_error_at=datetime('now') WHERE id=?`).run(m, userId);
+    },
+    clearImapRuleError: (userId) => {
+        getDb().prepare(`UPDATE users SET last_imap_rule_error=NULL, last_imap_rule_error_at=NULL WHERE id=?`).run(userId);
+    },
 
     // Per-user stats helpers
     recordStat: (userId, type) => {

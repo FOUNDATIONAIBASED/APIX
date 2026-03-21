@@ -1097,6 +1097,11 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
     <div class="view" id="view-mail">
       <div class="sh"><div><div class="sh-t">Mail</div><div class="sh-s">IMAP inboxes, local index, and SMS → email triggers. Configure Telegram/SMS forwarding rules in the <strong>Telegram</strong> and <strong>SMS</strong> tabs.</div></div></div>
 
+      <div class="panel setup-accent ac-mail" id="automationHealthPanel" style="margin-bottom:14px;display:none;">
+        <div class="ph"><div class="ph-t">Automation health</div><button type="button" class="btn sm" onclick="loadAutomationHealth()">Refresh</button></div>
+        <div class="pb" id="automationHealthBody" style="font-size:12px;color:var(--tx2);line-height:1.55;"></div>
+      </div>
+
       <div class="panel setup-accent ac-mail" style="margin-bottom:14px;">
         <div class="ph"><div class="ph-t">SMS / MMS → email</div></div>
         <div class="pb" style="font-size:12px;color:var(--tx2);line-height:1.65;">
@@ -1132,7 +1137,7 @@ message: Your text here…</pre>
 
       <div class="panel setup-accent ac-mail" style="margin-bottom:14px;">
         <div class="ph"><div class="ph-t">IMAP accounts</div><button class="btn sm" onclick="loadImapAccounts()">Refresh</button></div>
-        <div class="pb" style="overflow-x:auto;"><table class="dt"><thead><tr><th>Name</th><th>Host</th><th>Last sync</th><th>UID</th><th></th></tr></thead><tbody id="imapAccBody"></tbody></table></div>
+        <div class="pb" style="overflow-x:auto;"><table class="dt"><thead><tr><th>Name</th><th>Host</th><th>Last sync</th><th>Last error</th><th>UID</th><th></th></tr></thead><tbody id="imapAccBody"></tbody></table></div>
       </div>
 
       <div class="panel setup-accent ac-mail">
@@ -1144,6 +1149,8 @@ message: Your text here…</pre>
     <!-- ── TELEGRAM (plan: forwarding_rules and/or imap_mail) ── -->
     <div class="view" id="view-telegram">
       <div class="sh"><div><div class="sh-t">Telegram</div><div class="sh-s">System bot, inbound SMS → Telegram, and IMAP → Telegram. Requires device ownership where applicable.</div></div></div>
+
+      <div class="panel setup-accent ac-tg automation-health-compact" style="margin-bottom:14px;display:none;"></div>
 
       <div class="panel setup-accent ac-tg" style="margin-bottom:14px;">
         <div class="ph"><div class="ph-t">System Telegram bot</div></div>
@@ -1186,7 +1193,10 @@ message: Your text here…</pre>
             <div><label class="fl">Body contains</label><input class="fi" id="tgImapBody"></div>
           </div>
           <div style="margin-top:10px;"><label class="fl">Telegram chat ID</label><input class="fi" id="tgImapChat"></div>
-          <button type="button" class="btn p sm" onclick="saveImapRuleFor('telegram')" style="margin-top:10px;">Save rule</button>
+          <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            <button type="button" class="btn p sm" onclick="saveImapRuleFor('telegram')">Save rule</button>
+            <button type="button" class="btn g sm" onclick="dryRunImapRuleFor('telegram')" title="Test matchers against last 25 messages in local index (no Telegram send)">Dry-run</button>
+          </div>
           <div class="ph" style="margin-top:16px;padding-top:0;border:none;"><div class="ph-t">IMAP rules (Telegram)</div><button type="button" class="btn sm" onclick="loadImapRulesFor('telegram','imapRuleBodyTg')">Refresh</button></div>
           <div style="overflow-x:auto;margin-top:8px;"><table class="dt"><thead><tr><th>Name</th><th>Match</th><th>Dest</th><th></th></tr></thead><tbody id="imapRuleBodyTg"></tbody></table></div>
         </div>
@@ -1196,6 +1206,8 @@ message: Your text here…</pre>
     <!-- ── SMS (plan: forwarding_rules and/or imap_mail) ── -->
     <div class="view" id="view-sms">
       <div class="sh"><div><div class="sh-t">SMS automation</div><div class="sh-s">Inbound SMS → outbound SMS and IMAP → SMS. Requires device ownership where applicable.</div></div></div>
+
+      <div class="panel setup-accent ac-sms automation-health-compact" style="margin-bottom:14px;display:none;"></div>
 
       <div class="panel setup-accent ac-sms" style="margin-bottom:14px;">
         <div class="ph"><div class="ph-t">Inbound SMS → SMS (forward)</div><span class="ph-s">Match rules on inbound SMS/MMS</span></div>
@@ -1230,7 +1242,10 @@ message: Your text here…</pre>
             <div><label class="fl">Body contains</label><input class="fi" id="smsImapBody"></div>
           </div>
           <div style="margin-top:10px;"><label class="fl">SMS to number</label><input class="fi" id="smsImapSmsTo" placeholder="+15551234567"></div>
-          <button type="button" class="btn p sm" onclick="saveImapRuleFor('sms')" style="margin-top:10px;">Save rule</button>
+          <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            <button type="button" class="btn p sm" onclick="saveImapRuleFor('sms')">Save rule</button>
+            <button type="button" class="btn g sm" onclick="dryRunImapRuleFor('sms')" title="Test matchers against last 25 messages in local index (no SMS send)">Dry-run</button>
+          </div>
           <div class="ph" style="margin-top:16px;padding-top:0;border:none;"><div class="ph-t">IMAP rules (SMS)</div><button type="button" class="btn sm" onclick="loadImapRulesFor('sms','imapRuleBodySms')">Refresh</button></div>
           <div style="overflow-x:auto;margin-top:8px;"><table class="dt"><thead><tr><th>Name</th><th>Match</th><th>Dest</th><th></th></tr></thead><tbody id="imapRuleBodySms"></tbody></table></div>
         </div>
@@ -3967,11 +3982,13 @@ async function myDataImport() {
 async function loadTelegramHub() {
   await loadForwardingRulesFor('telegram', 'forwardingBodyTelegram');
   await loadImapRulesFor('telegram', 'imapRuleBodyTg');
+  await loadAutomationHealth();
 }
 
 async function loadSmsHub() {
   await loadForwardingRulesFor('sms', 'forwardingBodySms');
   await loadImapRulesFor('sms', 'imapRuleBodySms');
+  await loadAutomationHealth();
 }
 
 async function loadForwardingRulesFor(channel, tbodyId) {
@@ -4052,21 +4069,113 @@ async function deleteForwardingRule(id) {
 
 async function loadMailHub() {
   if (_currentUser?.role !== 'admin' && !_currentPlan?.features?.imap_mail) return;
-  await Promise.all([loadImapAccounts(), loadImapLocal()]);
+  await Promise.all([loadImapAccounts(), loadImapLocal(), loadAutomationHealth()]);
+}
+
+/** Ops: DB uptime, IMAP sync errors, SMS forward / IMAP-rule forward errors */
+async function loadAutomationHealth() {
+  const can = _currentUser?.role === 'admin' || _currentPlan?.features?.imap_mail || _currentPlan?.features?.forwarding_rules;
+  const panel = document.getElementById('automationHealthPanel');
+  const body = document.getElementById('automationHealthBody');
+  const compacts = document.querySelectorAll('.automation-health-compact');
+  if (!can) {
+    if (panel) panel.style.display = 'none';
+    compacts.forEach((el) => { el.style.display = 'none'; el.innerHTML = ''; });
+    return;
+  }
+  const r = await fetch('/api/v1/mail/automation-health', { credentials: 'include' });
+  if (r.status === 402 || r.status === 403) {
+    if (panel) panel.style.display = 'none';
+    compacts.forEach((el) => { el.style.display = 'none'; el.innerHTML = ''; });
+    return;
+  }
+  const d = await r.json().catch(() => ({}));
+  if (d.error) {
+    if (body) body.innerHTML = `<span style="color:var(--c6);">${escapeHtml(d.error)}</span>`;
+    if (panel) panel.style.display = '';
+    return;
+  }
+  const srv = d.server || {};
+  let html = `<div style="margin-bottom:10px;"><strong>Server</strong> · DB: <span style="color:${srv.db_ok ? 'var(--c4)' : 'var(--c6)'}">${srv.db_ok ? 'ok' : 'error'}</span> · uptime ${Math.floor(srv.uptime_seconds || 0)}s · ~${srv.memory_free_mb || '—'} MB free</div>`;
+  if (d.imap_accounts) {
+    html += '<strong>IMAP sync</strong>';
+    const bad = (d.imap_accounts || []).filter((a) => a.last_sync_error);
+    if (bad.length) {
+      html += '<ul style="margin:6px 0 0 18px;padding:0;">' + bad.map((a) =>
+        `<li><code style="font-size:11px;">${escapeHtml(a.name || a.id)}</code>: <span style="color:var(--c6);">${escapeHtml(String(a.last_sync_error).slice(0, 200))}</span></li>`
+      ).join('') + '</ul>';
+    } else {
+      html += ' · <span style="color:var(--tx3);">no sync errors.</span>';
+    }
+    html += '<br><br>';
+  }
+  if (d.imap_rule_forward) {
+    html += '<strong>IMAP → Telegram/SMS rules</strong> · ';
+    html += d.imap_rule_forward.last_error
+      ? `<span style="color:var(--c6);">${escapeHtml(d.imap_rule_forward.last_error)}</span> <span style="color:var(--tx3);font-size:11px;">(${escapeHtml((d.imap_rule_forward.last_error_at || '').slice(0, 19).replace('T', ' '))})</span>`
+      : '<span style="color:var(--tx3);">no errors recorded.</span>';
+    html += '<br><br>';
+  }
+  if (d.sms_forward) {
+    html += '<strong>Inbound SMS forwarding</strong> · ';
+    html += d.sms_forward.last_error
+      ? `<span style="color:var(--c6);">${escapeHtml(d.sms_forward.last_error)}</span> <span style="color:var(--tx3);font-size:11px;">(${escapeHtml((d.sms_forward.last_error_at || '').slice(0, 19).replace('T', ' '))})</span>`
+      : '<span style="color:var(--tx3);">no errors recorded.</span>';
+  }
+  if (body) body.innerHTML = html || '—';
+  if (panel) panel.style.display = '';
+  const imapErr = (d.imap_accounts || []).some((a) => a.last_sync_error);
+  const ruleErr = d.imap_rule_forward && d.imap_rule_forward.last_error;
+  const smsErr = d.sms_forward && d.sms_forward.last_error;
+  const anyErr = !srv.db_ok || imapErr || ruleErr || smsErr;
+  const short = anyErr
+    ? `<div class="ph" style="border:none;padding-bottom:8px;"><div class="ph-t">Automation health</div><button type="button" class="btn sm" onclick="loadAutomationHealth()">Refresh</button></div><div class="pb" style="font-size:12px;color:var(--c6);">${!srv.db_ok ? 'DB check failed. ' : ''}${imapErr ? 'IMAP sync error. ' : ''}${ruleErr ? 'IMAP rule error. ' : ''}${smsErr ? 'SMS forward error.' : ''} <button type="button" class="btn xs g" onclick="goView('mail', document.querySelector('.sn-item[onclick*=\\'mail\\']'))">Open Mail →</button></div>`
+    : `<div class="pb" style="font-size:12px;color:var(--tx3);display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;"><span>Automation: OK (no recorded errors).</span><button type="button" class="btn xs g" onclick="goView('mail', document.querySelector('.sn-item[onclick*=\\'mail\\']'))">Mail health →</button></div>`;
+  compacts.forEach((el) => {
+    el.innerHTML = short;
+    el.style.display = '';
+  });
+}
+
+async function dryRunImapRuleFor(channel) {
+  if (_currentUser?.role !== 'admin' && !_currentPlan?.features?.imap_mail) {
+    return toast('Email & IMAP plan feature required for dry-run', 'amber');
+  }
+  const ids = channel === 'telegram'
+    ? { acc: 'tgImapAccId', all: 'tgImapAll', from: 'tgImapFrom', sub: 'tgImapSub', body: 'tgImapBody' }
+    : { acc: 'smsImapAccId', all: 'smsImapAll', from: 'smsImapFrom', sub: 'smsImapSub', body: 'smsImapBody' };
+  const body = {
+    limit: 25,
+    imap_account_id: document.getElementById(ids.acc)?.value?.trim() || null,
+    match_all: document.getElementById(ids.all)?.checked === true,
+    match_from_regex: document.getElementById(ids.from)?.value?.trim() || null,
+    match_subject_contains: document.getElementById(ids.sub)?.value?.trim() || null,
+    match_body_contains: document.getElementById(ids.body)?.value?.trim() || null,
+    channel: channel === 'telegram' ? 'telegram' : 'sms',
+  };
+  const res = await fetch('/api/v1/mail/imap-rules/dry-run', {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const d = await res.json().catch(() => ({}));
+  if (!res.ok) return toast(d.error || 'Dry-run failed', 'red');
+  toast(`Dry-run: matched ${d.matched_count} of ${d.scanned} message(s) in local index (nothing was sent).`, 'green');
 }
 
 async function loadImapAccounts() {
   const tb = document.getElementById('imapAccBody');
   if (!tb) return;
   const d = await fetch('/api/v1/mail/imap-accounts', { credentials: 'include' }).then(r => r.json()).catch(() => ({}));
-  if (d.error) { tb.innerHTML = `<tr><td colspan="5" style="color:var(--c6);">${d.error}</td></tr>`; return; }
+  if (d.error) { tb.innerHTML = `<tr><td colspan="6" style="color:var(--c6);">${d.error}</td></tr>`; return; }
   const rows = d.accounts || [];
-  if (!rows.length) { tb.innerHTML = '<tr><td colspan="5" style="color:var(--tx3);font-size:12px;">No IMAP accounts yet.</td></tr>'; return; }
+  if (!rows.length) { tb.innerHTML = '<tr><td colspan="6" style="color:var(--tx3);font-size:12px;">No IMAP accounts yet.</td></tr>'; return; }
   tb.innerHTML = rows.map(a => `
     <tr>
       <td>${escapeHtml(a.name)}</td>
       <td style="font-family:var(--fm);font-size:11px;">${escapeHtml(a.host)}:${a.port}</td>
       <td style="font-size:11px;color:var(--tx3);">${a.last_sync_at ? a.last_sync_at.slice(0,19).replace('T',' ') : '—'}</td>
+      <td style="font-size:11px;color:${a.last_sync_error ? 'var(--c6)' : 'var(--tx3)'};max-width:160px;overflow:hidden;text-overflow:ellipsis;" title="${a.last_sync_error ? escapeHtml(a.last_sync_error) : ''}">${a.last_sync_error ? escapeHtml(String(a.last_sync_error).slice(0, 48)) + (String(a.last_sync_error).length > 48 ? '…' : '') : '—'}</td>
       <td style="font-family:var(--fm);">${a.last_uid || 0}</td>
       <td><button class="btn p xs" onclick="syncImapAccount('${a.id}')">Sync now</button>
           <button class="btn danger xs" onclick="deleteImapAccount('${a.id}')">Delete</button></td>
@@ -4094,8 +4203,8 @@ async function saveImapAccount() {
 async function syncImapAccount(id) {
   const res = await fetch('/api/v1/mail/imap-accounts/' + encodeURIComponent(id) + '/sync', { method: 'POST', credentials: 'include' });
   const d = await res.json().catch(() => ({}));
-  if (res.ok) { toast('Sync complete'); loadImapAccounts(); loadImapLocal(); }
-  else toast(d.error || 'Sync failed', 'red');
+  if (res.ok) { toast('Sync complete'); loadImapAccounts(); loadImapLocal(); loadAutomationHealth(); }
+  else { toast(d.error || 'Sync failed', 'red'); loadAutomationHealth(); }
 }
 
 async function deleteImapAccount(id) {

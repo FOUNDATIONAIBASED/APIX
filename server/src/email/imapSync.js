@@ -22,7 +22,12 @@ function _attachDir() {
     return d;
 }
 
-function _matchRule(rule, mail) {
+/**
+ * Whether an IMAP forward rule matches a stored mail row (dry-run / live).
+ * @param {object} rule — imap_forward_rules row
+ * @param {object} mail — received_emails_local row shape
+ */
+function matchImapRule(rule, mail) {
     if (rule.imap_account_id && rule.imap_account_id !== mail.imap_account_id) return false;
     if (rule.match_all) return true;
     const hasFilter = rule.match_from_regex || rule.match_subject_contains || rule.match_body_contains;
@@ -42,7 +47,7 @@ async function _applyForwardRules(mailRow) {
     const rules = ImapForwardRules.findByUser(mailRow.user_id).filter(r => r.enabled);
     const sorted = [...rules].sort((a, b) => (b.priority || 0) - (a.priority || 0));
     for (const rule of sorted) {
-        if (!_matchRule(rule, mailRow)) continue;
+        if (!matchImapRule(rule, mailRow)) continue;
         const subj = mailRow.subject || '(no subject)';
         const preview = (mailRow.body_text || mailRow.snippet || '').slice(0, 1500);
         if (rule.channel === 'telegram') {
@@ -50,7 +55,9 @@ async function _applyForwardRules(mailRow) {
             const tcfg = telegram.getConfig();
             if (!tcfg.botToken || !chatId) continue;
             const text = `📧 <b>IMAP</b>\n<b>From:</b> ${escapeHtml(mailRow.from_addr || '—')}\n<b>Subject:</b> ${escapeHtml(subj)}\n\n${escapeHtml(preview)}`;
-            await telegram.sendMessage(tcfg.botToken, chatId, text);
+            const tgOk = await telegram.sendMessage(tcfg.botToken, chatId, text);
+            if (!tgOk) Users.setLastImapRuleError(mailRow.user_id, 'Telegram sendMessage failed (IMAP rule)');
+            else Users.clearImapRuleError(mailRow.user_id);
         } else if (rule.channel === 'sms') {
             const dest = String(rule.dest_sms_to || '').trim();
             if (!dest) continue;
@@ -58,8 +65,10 @@ async function _applyForwardRules(mailRow) {
             scheduler.enqueue(async () => {
                 try {
                     await scheduler.dispatchSms({ to: dest, from: null, body, type: 'sms' });
+                    Users.clearImapRuleError(mailRow.user_id);
                 } catch (e) {
                     console.warn('[IMAP→SMS]', e.message);
+                    Users.setLastImapRuleError(mailRow.user_id, `SMS forward: ${e.message}`);
                 }
             }, rule.priority || 5);
         }
@@ -168,6 +177,7 @@ async function syncAccount(account) {
                 await _applyForwardRules(row);
             } catch (e) {
                 console.warn('[IMAP] forward rules', e.message);
+                try { Users.setLastImapRuleError(row.user_id, e.message); } catch (_) {}
             }
         }
     } finally {
@@ -177,6 +187,7 @@ async function syncAccount(account) {
     ImapAccounts.update(account.id, account.user_id, {
         last_uid: maxSeen,
         last_sync_at: new Date().toISOString(),
+        last_sync_error: null,
     });
 }
 
@@ -200,8 +211,13 @@ async function syncAll() {
             await syncAccount(raw);
         } catch (e) {
             console.error(`[IMAP] sync ${raw.id} (${raw.host}):`, e.message);
+            try {
+                ImapAccounts.update(raw.id, raw.user_id, {
+                    last_sync_error: String(e.message || 'sync failed').slice(0, 500),
+                });
+            } catch (_) { /* ignore */ }
         }
     }
 }
 
-module.exports = { syncAccount, syncAll };
+module.exports = { syncAccount, syncAll, matchImapRule };

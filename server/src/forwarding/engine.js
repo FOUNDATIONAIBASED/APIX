@@ -65,7 +65,9 @@ async function processInbound(data) {
             const token = cfg.botToken;
             if (!token || !chatId) continue;
             const text = _formatBody(data);
-            await telegram.sendMessage(token, String(chatId).trim(), text);
+            const ok = await telegram.sendMessage(token, String(chatId).trim(), text);
+            if (ok) Users.clearSmsForwardError(dev.user_id);
+            else Users.setLastSmsForwardError(dev.user_id, 'Telegram sendMessage failed (forwarding rule)');
         } else if (rule.channel === 'sms') {
             const dest = (rule.dest_sms_to || '').trim();
             if (!dest) continue;
@@ -80,8 +82,10 @@ async function processInbound(data) {
                             type: 'sms',
                             deviceId,
                         });
+                        Users.clearSmsForwardError(dev.user_id);
                     } catch (e) {
                         console.warn('[FORWARD] SMS rule failed:', e.message);
+                        Users.setLastSmsForwardError(dev.user_id, `SMS forward: ${e.message}`);
                     }
                     resolve();
                 }, rule.priority || 5);
