@@ -6,7 +6,7 @@
 <title>ApiX Gateway — Management Console</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect fill='%233b82f6' width='32' height='32' rx='6'/><text x='16' y='22' font-size='16' font-weight='bold' fill='white' text-anchor='middle' font-family='sans-serif'>AX</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=Azeret+Mono:ital,wght@0,300;0,400;0,500;0,700;1,400&family=Epilogue:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha384-3zSEDfvllQohrq0PHL1fOXJuC/jSOO34H46t6UQfobFOmxE5BpjjaIJY5F2/bMnU" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <style>
 /* ── Plan gate overlay ── */
 .plan-gate-overlay{position:absolute;inset:0;background:rgba(6,11,22,.92);backdrop-filter:blur(6px);z-index:10;display:flex;align-items:center;justify-content:center;border-radius:12px;}
@@ -67,6 +67,10 @@ html{transition:background-color .2s,color .2s;}
 .theme-btn:hover{background:var(--s1);color:var(--tx);}
 *{margin:0;padding:0;box-sizing:border-box;}
 html,body{height:100%;font-family:var(--fb);background:var(--bg);color:var(--tx);overflow-x:hidden;}
+/* Session gate: hide console until /api/auth/me succeeds (no dashboard flash before login redirect) */
+body.auth-pending .shell{visibility:hidden;}
+#authBootOverlay{position:fixed;inset:0;z-index:999999;display:flex;align-items:center;justify-content:center;background:var(--bg);font-family:var(--fm);font-size:13px;color:var(--tx2);}
+body.auth-verified #authBootOverlay{display:none!important;}
 body::before{content:'';position:fixed;inset:0;pointer-events:none;
   background:radial-gradient(ellipse 60% 40% at 15% 20%,rgba(59,130,246,.06) 0%,transparent 70%),
              radial-gradient(ellipse 50% 30% at 85% 70%,rgba(139,92,246,.05) 0%,transparent 70%);}
@@ -357,8 +361,14 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
 .toast.amber{border-color:rgba(245,158,11,.3);}
 </style>
 </head>
-<body>
-<div class="shell">
+<body class="auth-pending">
+<div id="authBootOverlay" role="status" aria-live="polite">
+  <div style="text-align:center;">
+    <div style="width:8px;height:8px;border-radius:50%;background:var(--c4);margin:0 auto 14px;animation:blink 1.2s infinite;"></div>
+    <span style="color:var(--tx3);letter-spacing:.06em;">Verifying session…</span>
+  </div>
+</div>
+<div class="shell" aria-hidden="true">
 
 <!-- SIDEBAR -->
 <aside class="side">
@@ -1764,6 +1774,23 @@ message: Your text here…</pre>
 <div class="toast-container" id="toasts"></div>
 
 <script>
+(function(){
+  const _f = window.fetch;
+  window.fetch = function(input, init) {
+    init = init || {};
+    const method = (init.method || 'GET').toUpperCase();
+    if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+      const m = document.cookie.match(/(?:^|;\s*)apix_csrf=([^;]+)/);
+      if (m) {
+        const token = decodeURIComponent(m[1]);
+        const headers = new Headers(init.headers || {});
+        if (token && !headers.has('X-CSRF-Token')) headers.set('X-CSRF-Token', token);
+        return _f(input, Object.assign({}, init, { headers: headers }));
+      }
+    }
+    return _f(input, init);
+  };
+})();
 // ════ STATE ════
 let allDevices = [], allNumbers = [], allCampaigns = [], allConversations = [], allMessages = [];
 let selectedNums = new Set();
@@ -1808,7 +1835,13 @@ async function apiCall(method, url, body) {
 function toast(msg,type='green'){
   const t=document.createElement('div');
   t.className=`toast ${type}`;
-  t.innerHTML=`<span style="font-size:14px;">${type==='green'?'✓':type==='red'?'✖':'⚠'}</span> ${msg}`;
+  const icon=document.createElement('span');
+  icon.style.fontSize='14px';
+  icon.textContent= type==='green'?'✓':type==='red'?'✖':'⚠';
+  const span=document.createElement('span');
+  span.textContent=' '+String(msg);
+  t.appendChild(icon);
+  t.appendChild(span);
   document.getElementById('toasts').appendChild(t);
   setTimeout(()=>t.remove(),3500);
 }
@@ -2395,7 +2428,7 @@ function selectSchedType(el,type){
 // Review
 function buildReview(){
   const nums=[...selectedNums];
-  const numChips=nums.map(n=>`<span class="chip blue">${n}</span>`).join(' ');
+  const numChips=nums.map(n=>`<span class="chip blue">${esc(n)}</span>`).join(' ');
   const min=parseInt(document.getElementById('dmin')?.value||8);
   const max=parseInt(document.getElementById('dmax')?.value||30);
   const ph=parseInt(document.getElementById('dph')?.value||15);
@@ -2405,10 +2438,10 @@ function buildReview(){
   document.getElementById('rv-name').textContent=document.getElementById('s1name')?.value||'—';
   document.getElementById('rv-total').textContent=total.toLocaleString()+' contacts';
   document.getElementById('rv-nums').innerHTML=numChips||'<span style="color:var(--tx3)">None</span>';
-  document.getElementById('rv-strat').innerHTML=`<span class="chip blue">${strat.replace('_',' ')}</span>`;
+  document.getElementById('rv-strat').innerHTML=`<span class="chip blue">${esc(strat.replace('_',' '))}</span>`;
   document.getElementById('rv-delay').innerHTML=`<span class="chip amber">⏱ ${min}–${max}s · Gaussian</span>`;
-  document.getElementById('rv-window').innerHTML=`<span class="chip green">${document.getElementById('dtstart')?.value||'09:00'} – ${document.getElementById('dtend')?.value||'20:00'}</span>`;
-  document.getElementById('rv-sched').innerHTML=`<span class="chip ${wizardSchedType==='immediate'?'running':'scheduled'}">${wizardSchedType}</span>`;
+  document.getElementById('rv-window').innerHTML=`<span class="chip green">${esc(document.getElementById('dtstart')?.value||'09:00')} – ${esc(document.getElementById('dtend')?.value||'20:00')}</span>`;
+  document.getElementById('rv-sched').innerHTML=`<span class="chip ${wizardSchedType==='immediate'?'running':'scheduled'}">${esc(wizardSchedType)}</span>`;
   document.getElementById('rv-est').textContent=`~${(total/(ph*n)).toFixed(1)} hours (${n} × ${ph}/hr)`;
   // Sim log
   const log=document.getElementById('simLog');log.innerHTML='';
@@ -2419,7 +2452,7 @@ function buildReview(){
     const fake='+1 (555) '+String(Math.floor(Math.random()*900)+100)+'-'+String(Math.floor(Math.random()*9000)+1000);
     const num=numArr[i%numArr.length];
     const numData=allNumbers.find(n=>(n.number||n.deviceId+'_'+n.slot)===num);
-    log.innerHTML+=`<div class="sim-event"><span class="sim-time">+${m>0?m+'m ':''}${s}s</span><span class="sim-num">${num}</span><span class="sim-to">${fake}</span><span><span class="carrier ${carrierClass(numData?.carrier)}">${numData?.carrier||'—'}</span></span></div>`;
+    log.innerHTML+=`<div class="sim-event"><span class="sim-time">+${m>0?m+'m ':''}${s}s</span><span class="sim-num">${esc(num)}</span><span class="sim-to">${esc(fake)}</span><span><span class="carrier ${carrierClass(numData?.carrier)}">${esc(numData?.carrier||'—')}</span></span></div>`;
     t+=delay;
   }
   if(!numArr.length)log.innerHTML='<div style="padding:20px;text-align:center;color:var(--tx3);font-size:11px;">No numbers selected.</div>';
@@ -3827,20 +3860,22 @@ const PLAN_FEATURE_LABELS = {
  * initAuth — returns true if authenticated, false + redirects if not.
  * Guards the entire dashboard: anyone without a valid session is sent to /login.
  */
+function revealAuthedShell() {
+  document.body.classList.remove('auth-pending');
+  document.body.classList.add('auth-verified');
+  const sh = document.querySelector('.shell');
+  if (sh) sh.removeAttribute('aria-hidden');
+}
+
 async function initAuth() {
   try {
-    const r = await fetch('/api/auth/me').catch(() => null);
+    const r = await fetch('/api/auth/me', { credentials: 'include' }).catch(() => null);
 
     if (!r || !r.ok) {
-      // Not authenticated — figure out where to send them
-      const s = await fetch('/api/auth/setup-status')
-        .then(r => r.json())
-        .catch(() => ({ needs_setup: true }));
-
-      // Always redirect to /login — it handles both first-time setup and regular login
+      // Not authenticated — redirect without ever revealing the dashboard shell
       const dest = '/login' + (location.pathname !== '/' ? '?redirect=' + encodeURIComponent(location.pathname + location.search) : '');
       window.location.replace(dest);
-      return false; // Signal: don't run init chain
+      return false;
     }
 
     const data = await r.json();
@@ -3850,15 +3885,19 @@ async function initAuth() {
     }
     _currentUser = data.user;
     _currentPlan = data.plan;
+    revealAuthedShell();
     applyAuthUI();
-    // Apply saved theme
     applyTheme((_currentUser.theme) || localStorage.getItem('apix_theme') || 'dark');
-    // Check for updates (non-blocking)
     checkForUpdate();
     return true;
   } catch (e) {
     console.warn('[auth] initAuth error:', e.message);
-    return true; // Network error — allow through so UI isn't totally broken
+    const ov = document.getElementById('authBootOverlay');
+    if (ov) {
+      ov.innerHTML = '<div style="text-align:center;max-width:340px;padding:24px;"><p style="color:var(--tx2);margin-bottom:16px;line-height:1.5;">Could not verify your session (network or server error).</p><button type="button" class="tbtn p" onclick="location.reload()">Retry</button></div>';
+      ov.setAttribute('role', 'alert');
+    }
+    return false;
   }
 }
 
