@@ -72,6 +72,13 @@
             </com.google.android.material.textfield.TextInputLayout>
 
             <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/gatewayStartOnBoot"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="@string/gateway_start_on_boot" />
+
+            <androidx.appcompat.widget.SwitchCompat
                 android:id="@+id/gatewayTls"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

@@ -1,0 +1,4 @@
+- [Home](Home.md)
+- [Server setup](Setup-Server.md)
+- [Android clients](Android-Clients.md)
+- [Automation](Automation.md)

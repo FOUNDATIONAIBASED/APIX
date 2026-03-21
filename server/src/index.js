@@ -11,6 +11,7 @@ const path                = require('path');
 const os                  = require('os');
 
 const cfg         = require('./config');
+const csrf        = require('./middleware/csrf');
 const { startMdns, stopMdns } = require('./mdns');
 const wsHandler   = require('./ws/handler');
 const dispatcher  = require('./queue/dispatcher');
@@ -37,6 +38,9 @@ const log = {
     info:  (...a) => logLevel >= 2 && console.info ('[INFO ]', ...a),
     debug: (...a) => logLevel >= 3 && console.log  ('[DEBUG]', ...a),
 };
+function sanitizeLogFragment(s) {
+    return String(s ?? '').replace(/[\r\n]/g, ' ').slice(0, 4000);
+}
 
 // ── Express app ───────────────────────────────────────────────
 const app    = express();
@@ -55,8 +59,10 @@ app.use(security.helmetMiddleware);
 app.use(security.globalLimiter);
 app.use(security.corsMiddleware);
 app.use(cookieParser());
+app.use(csrf.ensureCsrfCookie);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+app.use(csrf.requireCsrfForCookieSession);
 
 // Serve management UI + docs
 app.use(express.static(path.join(__dirname, '..', 'public'), {
@@ -66,7 +72,7 @@ app.use(express.static(path.join(__dirname, '..', 'public'), {
 
 // ── Request logger ─────────────────────────────────────────────
 app.use((req, _res, next) => {
-    log.debug(`${req.method} ${req.path}`);
+    log.debug(`${req.method} ${sanitizeLogFragment(req.path)}`);
     next();
 });
 
@@ -223,9 +229,14 @@ const wss = new WebSocketServer({ server, path: '/ws' });
 wss.on('connection', (ws, req) => wsHandler.handleConnection(ws, req, emitter));
 
 // ── Event → Webhook dispatch ──────────────────────────────────
+function dispatchWebhook(event, payload) {
+    return dispatcher.dispatch(event, payload).catch((e) => log.warn(`[dispatcher] ${event}:`, e.message));
+}
+
 emitter.on('message:inbound', async (data) => {
-    log.info(`MSG IN  ${data.from} → ${data.to}: ${(data.body || '').slice(0, 60)}`);
-    await dispatcher.dispatch('message.inbound', data);
+    try {
+        log.info(`MSG IN  ${data.from} → ${data.to}: ${(data.body || '').slice(0, 60)}`);
+        await dispatchWebhook('message.inbound', data);
 
     // Telegram forward (if configured)
     try {
@@ -258,27 +269,34 @@ emitter.on('message:inbound', async (data) => {
             log.info(`LLM auto-reply → ${replyTo}: ${result.reply.slice(0, 60)}`);
         }
     } catch (e) { log.debug('LLM auto-reply error:', e.message); }
+    } catch (e) {
+        log.warn('[emitter] message:inbound:', e.message);
+    }
 });
 
 emitter.on('message:status', async (data) => {
-    await dispatcher.dispatch(`message.${data.status}`, data);
+    try {
+        await dispatchWebhook(`message.${data.status}`, data);
+    } catch (e) {
+        log.warn('[emitter] message:status:', e.message);
+    }
 });
 
 emitter.on('device:registered', (data) => {
     log.info(`Device registered: ${data.deviceId} (${data.status})`);
-    dispatcher.dispatch('device.registered', data);
+    void dispatchWebhook('device.registered', data);
 });
 emitter.on('device:online',  (data) => {
     log.info(`Device online: ${data.deviceId}`);
-    dispatcher.dispatch('device.online', data);
+    void dispatchWebhook('device.online', data);
 });
 emitter.on('device:offline', (data) => {
     log.info(`Device offline: ${data.deviceId}`);
-    dispatcher.dispatch('device.offline', data);
+    void dispatchWebhook('device.offline', data);
 });
 emitter.on('optout:received', (data) => {
     log.info(`Opt-out received from ${data.from}`);
-    dispatcher.dispatch('optout.received', data);
+    void dispatchWebhook('optout.received', data);
 });
 
 // ── Startup ───────────────────────────────────────────────────
@@ -315,6 +333,13 @@ server.listen(cfg.port, cfg.host, () => {
     cron.schedule('* * * * *', () => {
         require('./email/imapSync').syncAll().catch((e) => log.debug('[IMAP poll]', e.message));
     });
+});
+
+process.on('unhandledRejection', (reason) => {
+    log.error('[process] unhandledRejection:', reason && reason.stack ? reason.stack : reason);
+});
+process.on('uncaughtException', (err) => {
+    log.error('[process] uncaughtException:', err && err.stack ? err.stack : err);
 });
 
 process.on('SIGTERM', graceful);

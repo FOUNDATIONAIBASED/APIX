@@ -16,12 +16,37 @@ const crypto  = require('crypto');
 const { v4: uuidv4 } = require('uuid');
 const cfg         = require('../config');
 const { sessionCookieOpts, clearSessionCookieOpts } = require('../cookies');
+const { setCsrfCookie, clearCsrfCookie } = require('../middleware/csrf');
 const { Users, Sessions, Plans, ApiKeys, PasswordResets, AuditLog, Settings, IpSecurity, UnbanChallenges } = require('../db');
 const { requireAuth } = require('../auth/middleware');
 const mailer  = require('../email/mailer');
 const fail2ban = require('../security/fail2banService');
 
 const SALT_ROUNDS = 12;
+
+/** Safe subset of Settings.ui_shell_config (JSON) for dashboard chrome. */
+function sanitizeUiShell(raw) {
+    try {
+        const j = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        if (!j || typeof j !== 'object') return null;
+        const out = {};
+        if (typeof j.logout_redirect === 'string' && j.logout_redirect.startsWith('/') && !j.logout_redirect.startsWith('//')) {
+            out.logout_redirect = j.logout_redirect.slice(0, 256);
+        }
+        if (typeof j.post_login_redirect === 'string' && j.post_login_redirect.startsWith('/') && !j.post_login_redirect.startsWith('//')) {
+            out.post_login_redirect = j.post_login_redirect.slice(0, 256);
+        }
+        if (j.buttons && typeof j.buttons === 'object') {
+            out.buttons = {};
+            for (const [k, v] of Object.entries(j.buttons)) {
+                if (typeof v === 'string' && v.length < 200 && /^[a-z0-9_]+$/.test(k)) out.buttons[k] = v;
+            }
+        }
+        return Object.keys(out).length ? out : null;
+    } catch {
+        return null;
+    }
+}
 const COLORS = ['#3b82f6','#8b5cf6','#10b981','#f59e0b','#ef4444','#06b6d4','#ec4899'];
 
 function randColor() { return COLORS[Math.floor(Math.random() * COLORS.length)]; }
@@ -84,6 +109,7 @@ router.post('/setup', async (req, res) => {
 
     const token = Sessions.create(id, req.ip, req.headers['user-agent']);
     fail2ban.onLoginSuccess(req);
+    setCsrfCookie(req, res);
     res
         .cookie('apix_session', token, sessionCookieOpts(req))
         .json({ success: true, token, user: { id, username, role: 'admin', display_name: display_name || username } });
@@ -123,6 +149,7 @@ router.post('/login', async (req, res) => {
     const plan = user.plan_id ? Plans.findById(user.plan_id) : Plans.getDefault();
     AuditLog.log({ user_id: user.id, username: user.username, action: 'auth.login_ok', ip: req.ip });
 
+    setCsrfCookie(req, res);
     res
         .cookie('apix_session', token, sessionCookieOpts(req))
         .json({
@@ -147,6 +174,7 @@ router.post('/login', async (req, res) => {
 router.post('/logout', requireAuth(), (req, res) => {
     const { getToken } = require('../auth/middleware');
     Sessions.delete(getToken(req));
+    clearCsrfCookie(req, res);
     res.clearCookie('apix_session', clearSessionCookieOpts(req)).json({ success: true });
 });
 
@@ -159,7 +187,16 @@ router.get('/me', requireAuth(), (req, res) => {
     const recentStats = Users.getStats(user.id, 30);
     const apiKeys = require('../db').ApiKeys.findAll().filter(k => k.user_id === user.id);
 
+    const csrfToken = setCsrfCookie(req, res);
+    let ui = null;
+    try {
+        const raw = Settings.get('ui_shell_config');
+        if (raw) ui = sanitizeUiShell(raw);
+    } catch (_) { /* ignore */ }
+
     res.json({
+        csrf_token: csrfToken,
+        ui,
         user: {
             id: user.id,
             username: user.username,
@@ -197,6 +234,7 @@ router.post('/change-password', requireAuth(), async (req, res) => {
     // Invalidate all other sessions
     Sessions.deleteAllForUser(user.id);
     const newToken = Sessions.create(user.id, req.ip, req.headers['user-agent']);
+    setCsrfCookie(req, res);
     res.cookie('apix_session', newToken, sessionCookieOpts(req))
         .json({ success: true, token: newToken });
 });

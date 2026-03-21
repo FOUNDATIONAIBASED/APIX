@@ -23,16 +23,16 @@ class PreferenceManager(context: Context) {
 
     var deviceToken: String?
         get() = prefs.getString(KEY_DEVICE_TOKEN, null)
-        set(v) = prefs.edit().putString(KEY_DEVICE_TOKEN, v).apply()
+        set(v) = prefs.edit().putString(KEY_DEVICE_TOKEN, v).commit()
 
     var deviceId: String?
         get() = prefs.getString(KEY_DEVICE_ID, null)
-        set(v) = prefs.edit().putString(KEY_DEVICE_ID, v).apply()
+        set(v) = prefs.edit().putString(KEY_DEVICE_ID, v).commit()
 
     /** One-time pairing token from QR scan — cleared after use */
     var pairingToken: String?
         get() = prefs.getString(KEY_PAIRING_TOKEN, null)
-        set(v) = prefs.edit().putString(KEY_PAIRING_TOKEN, v).apply()
+        set(v) = prefs.edit().putString(KEY_PAIRING_TOKEN, v).commit()
 
     /** All WebSocket URLs from QR scan payload (JSON array string) */
     var qrWsUrls: String?

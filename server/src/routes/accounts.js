@@ -32,6 +32,19 @@ const mailer = require('../email/mailer');
 const SALT_ROUNDS = 12;
 const COLORS = ['#3b82f6','#8b5cf6','#10b981','#f59e0b','#ef4444','#06b6d4','#ec4899'];
 
+/** Email shape check without polynomial-time regex (ReDoS-safe). */
+function isValidEmail(s) {
+    const t = String(s || '').trim().toLowerCase();
+    if (t.length < 5 || t.length > 254) return false;
+    const at = t.indexOf('@');
+    if (at < 1 || at === t.length - 1) return false;
+    const local = t.slice(0, at);
+    const domain = t.slice(at + 1);
+    if (!domain.includes('.') || local.includes('@') || domain.includes('@')) return false;
+    if (/[\s]/.test(local) || /[\s]/.test(domain)) return false;
+    return true;
+}
+
 // ── helpers ────────────────────────────────────────────────────
 function safe(user) {
     const u = { ...user };
@@ -72,7 +85,7 @@ router.post('/invite', requirePerm('accounts:create'), async (req, res) => {
     if (!username || !email) return res.status(400).json({ error: 'username and email required' });
     if (username.length < 3) return res.status(400).json({ error: 'Username too short (min 3)' });
     const emailTrim = String(email).trim().toLowerCase();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrim)) return res.status(400).json({ error: 'Valid email required' });
+    if (!isValidEmail(emailTrim)) return res.status(400).json({ error: 'Valid email required' });
     if (Users.findByUsername(username)) return res.status(409).json({ error: 'Username already taken' });
     if (Users.findByEmail(emailTrim)) return res.status(409).json({ error: 'Email already registered' });
 

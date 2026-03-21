@@ -9,6 +9,10 @@ const smtpTransport = require('./smtpTransport');
 
 const NOTIFY_STATE_KEY = 'smtp_quota_notify_state_json';
 
+function sanitizeLogFragment(s) {
+    return String(s ?? '').replace(/[\r\n]/g, ' ').slice(0, 2000);
+}
+
 function loadNotifyState() {
     try {
         const raw = Settings.get(NOTIFY_STATE_KEY, '{}');
@@ -145,8 +149,8 @@ async function sendTransactional(opts) {
     const { to, subject, text, html, skipQuota, attachments } = opts;
     const profiles = smtpConfig.getEffectiveProfiles();
     if (!profiles.length) {
-        console.info(`[MAIL] No SMTP configured — would send to ${to}: ${subject}`);
-        if (text) console.info('[MAIL]', text);
+        console.info(`[MAIL] No SMTP configured — would send to ${sanitizeLogFragment(to)}: ${sanitizeLogFragment(subject)}`);
+        if (text) console.info('[MAIL]', sanitizeLogFragment(text));
         return false;
     }
 

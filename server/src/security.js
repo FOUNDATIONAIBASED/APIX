@@ -112,17 +112,14 @@ function apiKeyAuth(required = true) {
         if (header) {
             rawKey = header.startsWith('Bearer ') ? header.slice(7) : header;
         } else if (req.query.api_key) {
-            if (getDeploymentMode() === 'production') {
-                return res.status(401).json({
-                    error: 'API key in query string is disabled in production mode. Send the X-API-Key header (or Authorization: Bearer).',
-                    code: 'API_KEY_QUERY_FORBIDDEN',
-                });
-            }
-            rawKey = req.query.api_key;
+            return res.status(400).json({
+                error: 'API key in query string is not supported. Use the X-API-Key header or Authorization: Bearer.',
+                code: 'API_KEY_QUERY_UNSUPPORTED',
+            });
         }
 
         if (!rawKey) {
-            if (required) return res.status(401).json({ error: 'API key required. Pass X-API-Key header or ?api_key= query.' });
+            if (required) return res.status(401).json({ error: 'API key required. Pass X-API-Key header or Authorization: Bearer.' });
             return next();
         }
 
@@ -132,10 +129,11 @@ function apiKeyAuth(required = true) {
             return next();
         }
 
-        // Sandbox mode: block destructive ops
+        // Sandbox mode: block destructive ops (device status callback is exempt)
+        const DEVICE_MSG_STATUS = /^\/api\/v1\/messages\/[^/]+\/status\/?$/;
         if (key.sandbox) {
             const blocked = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)
-                && !req.path.includes('/status'); // allow status callbacks
+                && !DEVICE_MSG_STATUS.test(req.path);
             if (blocked && req.path.includes('/messages/send')) {
                 // Simulate but don't actually send
                 req.sandboxMode = true;

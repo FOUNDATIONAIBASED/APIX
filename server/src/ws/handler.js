@@ -7,26 +7,56 @@ const cfg                         = require('../config');
 // Map of deviceId → WebSocket connection
 const clients = new Map();
 
+/** ws.send can throw if the socket is closing; never let that crash the process */
+function safeSend(ws, payload) {
+    if (!ws || ws.readyState !== 1 /* OPEN */) return false;
+    try {
+        const msg = typeof payload === 'string' ? payload : JSON.stringify(payload);
+        ws.send(msg);
+        return true;
+    } catch (e) {
+        console.warn('[WS] send failed:', e.message);
+        return false;
+    }
+}
+
 function broadcast(data, excludeDeviceId = null) {
     const msg = JSON.stringify(data);
     for (const [id, ws] of clients) {
         if (id !== excludeDeviceId && ws.readyState === 1 /* OPEN */) {
-            ws.send(msg);
+            if (!safeSend(ws, msg)) clients.delete(id);
         }
     }
 }
 
 function sendToDevice(deviceId, data) {
     const ws = clients.get(deviceId);
-    if (ws && ws.readyState === 1) {
-        ws.send(JSON.stringify(data));
-        return true;
-    }
+    if (!ws || ws.readyState !== 1) return false;
+    if (safeSend(ws, data)) return true;
+    clients.delete(deviceId);
     return false;
+}
+
+/** Close and drop a device connection (e.g. admin deleted device) */
+function removeClient(deviceId) {
+    const ws = clients.get(deviceId);
+    if (ws) {
+        try { ws.close(4000, 'device removed'); } catch (_) {}
+        clients.delete(deviceId);
+    }
 }
 
 function getConnectedDeviceIds() {
     return [...clients.keys()];
+}
+
+/** Stable client id from Android Settings.Secure.ANDROID_ID (prevents duplicate device rows if token not persisted). */
+function normalizeAndroidId(raw) {
+    if (raw == null) return '';
+    const s = String(raw).trim().slice(0, 96);
+    if (!s) return '';
+    if (!/^[a-zA-Z0-9._-]+$/.test(s)) return '';
+    return s;
 }
 
 // Called from REST to queue a send through a connected device
@@ -77,13 +107,17 @@ function handleConnection(ws, req, emitter) {
     ws.on('message', (raw) => {
         let msg;
         try { msg = JSON.parse(raw.toString()); }
-        catch { ws.send(JSON.stringify({ type: 'error', message: 'Invalid JSON' })); return; }
+        catch { safeSend(ws, { type: 'error', message: 'Invalid JSON' }); return; }
 
         switch (msg.type) {
 
             // ── Device registration ───────────────────────────
             case 'register': {
-                const existing = msg.token ? Devices.findByToken(msg.token) : null;
+                const androidId = normalizeAndroidId(msg.androidId ?? msg.android_id);
+                let existing = msg.token ? Devices.findByToken(msg.token) : null;
+                if (!existing && androidId) {
+                    existing = Devices.findByAndroidId(androidId);
+                }
 
                 if (existing) {
                     deviceId = existing.id;
@@ -91,10 +125,23 @@ function handleConnection(ws, req, emitter) {
                     // Do NOT set status to "online" — DB uses pending|approved|suspended only.
                     // "online" breaks outbound dispatch (scheduler filters status === 'approved').
                     if (msg.sims?.length) Devices.upsertSims(deviceId, msg.sims);
+                    if (androidId) Devices.setAndroidId(deviceId, androidId);
                     try {
-                        getDb().prepare("UPDATE devices SET last_seen=datetime('now') WHERE id=?").run(deviceId);
+                        const bat = typeof msg.battery === 'number' ? msg.battery : null;
+                        getDb().prepare(`
+                            UPDATE devices SET last_seen=datetime('now'),
+                                model=COALESCE(?, model),
+                                android_version=COALESCE(?, android_version),
+                                battery=COALESCE(?, battery)
+                            WHERE id=?`).run(
+                            msg.model || null,
+                            msg.androidVersion || null,
+                            bat,
+                            deviceId,
+                        );
                     } catch (_) { /* ignore */ }
-                    ws.send(JSON.stringify({ type: 'registered', deviceId, token: existing.token }));
+                    const st = existing.status || 'pending';
+                    safeSend(ws, { type: 'registered', deviceId, token: existing.token, status: st });
                     emitter.emit('device:online', { deviceId });
                     console.log(`[WS] Device re-registered: ${deviceId}`);
                 } else {
@@ -113,12 +160,13 @@ function handleConnection(ws, req, emitter) {
                         android_version: msg.androidVersion || null,
                         status,
                         battery: msg.battery || null,
+                        android_id: androidId || null,
                     });
                     if (msg.sims?.length) Devices.upsertSims(id, msg.sims);
 
                     deviceId = id;
                     clients.set(deviceId, ws);
-                    ws.send(JSON.stringify({ type: 'registered', deviceId, token, status }));
+                    safeSend(ws, { type: 'registered', deviceId, token, status });
                     emitter.emit('device:registered', { deviceId, status });
                     console.log(`[WS] New device registered: ${id} (status: ${status})`);
                 }
@@ -144,7 +192,7 @@ function handleConnection(ws, req, emitter) {
                     }
                 } catch {}
                 emitter.emit('device:heartbeat', { id: deviceId, battery: msg.battery, signal_level: msg.signal_level, network_type: msg.network_type });
-                ws.send(JSON.stringify({ type: 'heartbeat_ack', ts: Date.now() }));
+                safeSend(ws, { type: 'heartbeat_ack', ts: Date.now() });
                 break;
             }
 
@@ -248,8 +296,16 @@ function handleConnection(ws, req, emitter) {
     ws.on('close', () => {
         if (deviceId) {
             clients.delete(deviceId);
-            Devices.updateStatus(deviceId, 'offline');
-            emitter.emit('device:offline', { deviceId });
+            // Do NOT set devices.status to 'offline' — dispatch/scheduler require 'approved'|'pending'|'suspended'.
+            // Connection state is tracked via clients map + device:offline event only.
+            try {
+                getDb().prepare("UPDATE devices SET last_seen=datetime('now') WHERE id=?").run(deviceId);
+            } catch (_) { /* device row may have been deleted */ }
+            try {
+                emitter.emit('device:offline', { deviceId });
+            } catch (e) {
+                console.warn('[WS] device:offline emitter error:', e.message);
+            }
             console.log(`[WS] Device disconnected: ${deviceId}`);
         }
     });
@@ -259,4 +315,4 @@ function handleConnection(ws, req, emitter) {
     });
 }
 
-module.exports = { handleConnection, broadcast, sendToDevice, dispatchSms, dispatchMms, getConnectedDeviceIds };
+module.exports = { handleConnection, broadcast, sendToDevice, dispatchSms, dispatchMms, getConnectedDeviceIds, removeClient };

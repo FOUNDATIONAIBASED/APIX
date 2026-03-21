@@ -33,6 +33,8 @@ const ALLOWED_KEYS = new Set([
     'send_window_start', 'send_window_end',
     'max_daily_per_number',
     'telegram_bot_token', 'telegram_chat_id', 'telegram_forward_enabled', 'telegram_forward_to_number',
+    /** JSON string: { "logout_redirect": "/login", "buttons": { "logout": "Sign out" } } — see docs */
+    'ui_shell_config',
 ]);
 
 // GET /api/v1/settings
@@ -55,6 +57,8 @@ router.put('/', (req, res) => {
                 return res.status(400).json({ error: 'deployment_mode must be homelab or production' });
             }
             Settings.set(k, m);
+        } else if (k === 'ui_shell_config' && v !== null && typeof v === 'object') {
+            Settings.set(k, JSON.stringify(v));
         } else {
             Settings.set(k, v);
         }
@@ -79,6 +83,8 @@ router.put('/:key', (req, res) => {
             return res.status(400).json({ error: 'deployment_mode must be homelab or production' });
         }
         Settings.set(req.params.key, m);
+    } else if (req.params.key === 'ui_shell_config' && value !== null && typeof value === 'object') {
+        Settings.set(req.params.key, JSON.stringify(value));
     } else {
         Settings.set(req.params.key, value);
     }

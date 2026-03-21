@@ -60,7 +60,7 @@ async function processInbound(data) {
     const subject = `[ApiX SMS] From ${data.from || 'unknown'} (${data.type || 'sms'})`;
     const text = parsed.message + (data.media_url ? `\n\nMedia: ${data.media_url}` : '');
     const html = `<pre style="font-family:system-ui,sans-serif;white-space:pre-wrap">${escapeHtml(parsed.message)}</pre>${
-        data.media_url ? `<p><a href="${escapeHtml(data.media_url)}">Media link</a></p>` : ''}`;
+        data.media_url ? `<p><a href="${escapeHtmlAttr(data.media_url)}">Media link</a></p>` : ''}`;
 
     const attachments = [];
     if (data.type === 'mms' && data.media_url) {
@@ -92,6 +92,9 @@ async function processInbound(data) {
 
 function escapeHtml(s) {
     return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function escapeHtmlAttr(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/\r|\n/g, ' ');
 }
 
 module.exports = { processInbound, parseSmsToEmailBody };

@@ -20,6 +20,12 @@ The workflow uses `source-root: server` and ignores `server/public/**` so CodeQL
 
 ## CSRF / `js/missing-token-validation`
 
-That query looks for classic CSRF token patterns. ApiX’s dashboard uses cookie sessions and many `fetch` calls; a monolithic `index.html` can produce a very large number of related locations for this rule. Scoping to `server/src` avoids flooding the alert with UI matches while keeping server-side logic under analysis.
+Cookie-based sessions (`apix_session`) use **double-submit CSRF**: the server sets a readable `apix_csrf` cookie and expects the same value in the `X-CSRF-Token` header on mutating requests. The dashboard (`public/index.html`) and `public/api-test.html` wrap `fetch()` to attach the header when the cookie is present.
 
-If you later add shared CSRF protection or split the front end, you can narrow `paths-ignore` and re-enable scanning of selected `public/` assets.
+That query still flags large inline UIs sometimes; scoping in [`.github/codeql/codeql-config.yml`](../.github/codeql/codeql-config.yml) can limit noise.
+
+## Other mitigations (server)
+
+- **API keys**: stored with **bcrypt** (legacy SHA-256 rows still verify).
+- **IMAP rules**: regex patterns are length-bounded and filtered for obvious ReDoS shapes.
+- **API key query strings**: not accepted — use headers only.

@@ -81,6 +81,7 @@
     <string name="gateway_token_hint">Device token (optional)</string>
     <string name="gateway_pairing_hint">Pairing token from QR (one-time)</string>
     <string name="gateway_use_tls">Use TLS (wss)</string>
+    <string name="gateway_start_on_boot">Start ApiX relay after phone reboot</string>
     <string name="gateway_start_relay">Start relay</string>
     <string name="gateway_stop_relay">Stop relay</string>
     <string name="gateway_reset_sms_cursor">Reset inbound SMS cursor</string>
@@ -88,6 +89,10 @@
     <string name="gateway_save">Save</string>
     <string name="gateway_status">Saved. Foreground relay shows connection in the notification. (%s)</string>
     <string name="gateway_status_hint_saved">settings saved</string>
+    <string name="gateway_save_ok">Settings saved</string>
+    <string name="gateway_relay_starting">Starting relay…</string>
+    <string name="gateway_registered">ApiX gateway: connected — device %1$s · %2$s</string>
+    <string name="gateway_registered_boot">ApiX gateway: started after reboot — device %1$s · %2$s</string>
     <string name="gateway_scan_qr_title">Scan gateway QR</string>
     <string name="gateway_scan_qr">Scan QR from server</string>
     <string name="gateway_scan_qr_instruction">Point the camera at the QR shown in ApiX Gateway → Devices → Pair New Device via QR</string>

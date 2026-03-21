@@ -45,4 +45,4 @@ This document summarizes **hardening assumptions** and **residual risks** for re
 
 - Keep **JWT_SECRET**, **HMAC_SECRET**, and API keys out of git and chat.
 - Use **`DEPLOYMENT_MODE=production`** with **`CORS_ORIGINS`** locked to your UI origin(s) when exposed to the internet.
-- Enable **`REQUIRE_API_KEY=true`** and avoid `?api_key=` in production.
+- Enable **`REQUIRE_API_KEY=true`**; pass keys via **`X-API-Key`** or **`Authorization: Bearer`** only (query-string keys are not supported).

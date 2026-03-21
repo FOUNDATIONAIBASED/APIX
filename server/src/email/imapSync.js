@@ -27,6 +27,19 @@ function _attachDir() {
  * @param {object} rule — imap_forward_rules row
  * @param {object} mail — received_emails_local row shape
  */
+const MAX_IMAP_REGEX_LEN = 256;
+/** Mitigate ReDoS / regex injection: bounded length + no nested quantifier traps (heuristic). */
+function safeImapFromRegexTest(pattern, input) {
+    const p = String(pattern || '').slice(0, MAX_IMAP_REGEX_LEN);
+    if (!p) return false;
+    if (/\(\([^)]+\)\+\)\+/.test(p) || /\(\.\*\)\{[0-9]+,/.test(p)) return false;
+    try {
+        return new RegExp(p, 'i').test(String(input || ''));
+    } catch {
+        return false;
+    }
+}
+
 function matchImapRule(rule, mail) {
     if (rule.imap_account_id && rule.imap_account_id !== mail.imap_account_id) return false;
     if (rule.match_all) return true;
@@ -34,9 +47,7 @@ function matchImapRule(rule, mail) {
     if (!hasFilter) return false;
     let hit = false;
     if (rule.match_from_regex) {
-        try {
-            if (new RegExp(rule.match_from_regex, 'i').test(mail.from_addr || '')) hit = true;
-        } catch { return false; }
+        if (safeImapFromRegexTest(rule.match_from_regex, mail.from_addr || '')) hit = true;
     }
     if (rule.match_subject_contains && String(mail.subject || '').includes(rule.match_subject_contains)) hit = true;
     if (rule.match_body_contains && String(mail.body_text || mail.snippet || '').includes(rule.match_body_contains)) hit = true;

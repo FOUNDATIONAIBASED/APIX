@@ -52,3 +52,6 @@ Thumbs.db
 # QKSMS fork — local/CI JDK trees (never push; GitHub rejects lib/modules >100MB)
 test/qksms/.ci-jdk11/
 test/qksms/.ci-jdk*/
+
+# Local-only wiki (private notes; not pushed — use docs/wiki-template + docs/wiki-local.md)
+/wiki/

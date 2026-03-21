@@ -50,7 +50,7 @@ See **[`.env.example`](./.env.example)** for every variable. Highlights:
 |----------|---------|
 | `PORT`, `HOST` | Listen address (default `3000`, `0.0.0.0`) |
 | `JWT_SECRET`, `HMAC_SECRET` | Required secrets — change before production |
-| `DEPLOYMENT_MODE` | `homelab` vs `production` — CORS + whether `?api_key=` is allowed |
+| `DEPLOYMENT_MODE` | `homelab` vs `production` — CORS strictness (API keys always via headers) |
 | `CORS_ORIGINS` | Comma-separated allowed Origins when locked down |
 | `USE_SSL` | `true` behind HTTPS reverse proxy (cookies / HSTS behavior) |
 | `DB_PATH` | SQLite file path |

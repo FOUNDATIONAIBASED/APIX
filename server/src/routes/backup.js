@@ -50,6 +50,16 @@ const engine   = require('../backup/engine');
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 500 * 1024 * 1024 } });
 
+function stripPrototypePollution(obj) {
+    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return obj;
+    const out = {};
+    for (const k of Object.keys(obj)) {
+        if (k === '__proto__' || k === 'constructor' || k === 'prototype') continue;
+        out[k] = obj[k];
+    }
+    return out;
+}
+
 // ── GET /info ──────────────────────────────────────────────────
 router.get('/info', requireAdmin, (req, res) => {
     engine.ensureDir ? null : null; // warmup
@@ -130,18 +140,29 @@ router.post('/restore', requireAdmin, upload.single('file'), (req, res) => {
     const snap = path.join(engine.BACKUP_DIR, `pre-restore-${ts}.db`);
     try { db.backup(snap); } catch (_) {}
 
+    const allowedTables = new Set(
+        db.prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").all().map(r => r.name),
+    );
     const restored = {}, errors = {};
     db.transaction(() => {
         for (const [t, rows] of Object.entries(dump.tables)) {
+            if (!allowedTables.has(t)) { errors[t] = 'Unknown or invalid table name'; continue; }
             if (!Array.isArray(rows) || !rows.length) { restored[t]=0; continue; }
             try {
                 const ex = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?").get(t);
                 if (!ex) { errors[t]='Table not in schema'; continue; }
-                const cols = Object.keys(rows[0]).join(',');
-                const phs  = Object.keys(rows[0]).map(()=>'?').join(',');
+                const row0 = stripPrototypePollution(rows[0]);
+                const cols = Object.keys(row0).join(',');
+                const phs  = Object.keys(row0).map(()=>'?').join(',');
                 const stmt = db.prepare(`INSERT OR REPLACE INTO "${t}" (${cols}) VALUES (${phs})`);
                 let n=0;
-                for (const r of rows) { try { stmt.run(Object.values(r)); n++; } catch(e) { errors[`${t}[${n}]`]=e.message; } }
+                for (const r of rows) {
+                    try {
+                        const safe = stripPrototypePollution(r);
+                        stmt.run(Object.values(safe));
+                        n++;
+                    } catch (e) { errors[`${t}[${n}]`]=e.message; }
+                }
                 restored[t]=n;
             } catch(e) { errors[t]=e.message; }
         }
@@ -157,8 +178,12 @@ router.post('/restore-db', requireAdmin, upload.single('file'), async (req, res)
     const ts   = new Date().toISOString().replace(/[:.]/g,'-');
     const snap = path.join(engine.BACKUP_DIR, `pre-restore-db-${ts}.db`);
     try { await getDb().backup(snap); } catch (_) {}
-    const tmp  = cfg.dbPath + '.restore-tmp';
-    fs.writeFileSync(tmp, req.file.buffer);
+    const tmp = path.resolve(`${cfg.dbPath}.restore-tmp`);
+    const dbDir = path.resolve(path.dirname(cfg.dbPath));
+    if (!tmp.startsWith(dbDir + path.sep) && tmp !== path.resolve(cfg.dbPath)) {
+        return res.status(500).json({ error: 'Invalid restore path' });
+    }
+    fs.writeFileSync(tmp, req.file.buffer, { mode: 0o600 });
     try {
         const Database = require('better-sqlite3');
         const test = new Database(tmp, { readonly: true });
@@ -270,8 +295,9 @@ router.put('/destinations/:id', requireAdmin, (req, res) => {
     const { name, config, enabled } = req.body;
     // Merge config so secrets not re-sent as *** aren't overwritten
     let mergedConfig = dest.config || {};
-    if (config) {
+    if (config && typeof config === 'object') {
         for (const [k, v] of Object.entries(config)) {
+            if (k === '__proto__' || k === 'constructor' || k === 'prototype') continue;
             if (v !== '***' && v !== '(file path)') mergedConfig[k] = v;
         }
     }

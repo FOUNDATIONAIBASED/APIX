@@ -23,9 +23,11 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.os.IBinder
 import android.os.Looper
+import android.provider.Settings
 import android.provider.Telephony
 import android.telephony.SubscriptionManager
 import android.util.Base64
+import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
@@ -54,6 +56,8 @@ class GatewayRelayService : Service() {
     private var relayStarted = false
     private var heartbeatRunnable: Runnable? = null
     private var currentStatus = STATUS_OFFLINE
+    private var pendingBootToast = false
+    private var shownRegisteredToast = false
 
     private var smsInboundObserver: ContentObserver? = null
     private var smsObserverThread: HandlerThread? = null
@@ -70,6 +74,12 @@ class GatewayRelayService : Service() {
         if (intent?.action == ACTION_STOP) {
             stopRelay()
             return START_NOT_STICKY
+        }
+
+        if (intent?.getBooleanExtra(EXTRA_FROM_BOOT, false) == true) {
+            pendingBootToast = true
+        } else if (intent != null) {
+            pendingBootToast = false
         }
 
         val host = gatewayPrefs.serverHost
@@ -137,6 +147,10 @@ class GatewayRelayService : Service() {
             payload["pairingToken"] = it
             gatewayPrefs.pairingToken = null
         }
+        val aid = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
+        if (!aid.isNullOrBlank()) {
+            payload["androidId"] = aid
+        }
         client.send(payload)
     }
 
@@ -144,7 +158,22 @@ class GatewayRelayService : Service() {
         when (type) {
             "registered" -> {
                 payload.get("token")?.asString?.let { gatewayPrefs.deviceToken = it }
+                val devId = payload.get("deviceId")?.asString ?: "—"
                 payload.get("deviceId")?.asString?.let { gatewayPrefs.deviceId = it }
+                val status = payload.get("status")?.asString?.trim() ?: ""
+                if (!shownRegisteredToast) {
+                    shownRegisteredToast = true
+                    val boot = pendingBootToast
+                    if (boot) pendingBootToast = false
+                    mainHandler.post {
+                        val res = if (boot) R.string.gateway_registered_boot else R.string.gateway_registered
+                        Toast.makeText(
+                            this@GatewayRelayService,
+                            getString(res, devId, status.ifBlank { "…" }),
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }
                 startSmsInboundObserver()
             }
             "approved" -> {
@@ -484,8 +513,11 @@ class GatewayRelayService : Service() {
         private const val STATUS_RECONNECTING = "reconnecting"
         private const val STATUS_OFFLINE = "offline"
 
-        fun start(context: Context) {
+        private const val EXTRA_FROM_BOOT = "apix_gateway_from_boot"
+
+        fun start(context: Context, fromBoot: Boolean = false) {
             val intent = Intent(context, GatewayRelayService::class.java)
+            if (fromBoot) intent.putExtra(EXTRA_FROM_BOOT, true)
             ContextCompat.startForegroundService(context, intent)
         }
 

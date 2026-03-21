@@ -90,14 +90,14 @@ function sendMessage(botToken, chatId, text, parseMode = 'HTML') {
                 res.on('end', () => {
                     if (res.statusCode >= 200 && res.statusCode < 300) resolve(true);
                     else {
-                        console.warn('[TELEGRAM]', res.statusCode, buf.slice(0, 200));
+                        console.warn('[TELEGRAM]', res.statusCode, buf.slice(0, 200).replace(/\r|\n/g, ' '));
                         resolve(false);
                     }
                 });
             }
         );
         req.on('error', (e) => {
-            console.warn('[TELEGRAM]', e.message);
+            console.warn('[TELEGRAM]', String(e.message).replace(/\r|\n/g, ' '));
             resolve(false);
         });
         req.setTimeout(10000, () => { req.destroy(); resolve(false); });

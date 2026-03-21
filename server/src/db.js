@@ -3,6 +3,7 @@ const Database = require('better-sqlite3');
 const path     = require('path');
 const fs       = require('fs');
 const crypto   = require('crypto');
+const bcrypt   = require('bcryptjs');
 const cfg      = require('./config');
 
 let _db = null;
@@ -601,6 +602,7 @@ function migrate(db) {
         "ALTER TABLE devices ADD COLUMN sim_slots TEXT DEFAULT '[]'",
         "ALTER TABLE devices ADD COLUMN app_version TEXT",
         "ALTER TABLE devices ADD COLUMN user_id TEXT",
+        "ALTER TABLE devices ADD COLUMN android_id TEXT",
         "ALTER TABLE users ADD COLUMN must_change_password INTEGER DEFAULT 0",
         "ALTER TABLE imap_accounts ADD COLUMN last_sync_error TEXT",
         "ALTER TABLE users ADD COLUMN last_sms_forward_error TEXT",
@@ -615,6 +617,7 @@ function migrate(db) {
     _db.exec(`
         CREATE INDEX IF NOT EXISTS idx_apikeys_user ON api_keys(user_id);
         CREATE INDEX IF NOT EXISTS idx_messages_apikey ON messages(api_key_prefix);
+        CREATE INDEX IF NOT EXISTS idx_devices_android_id ON devices(android_id);
     `);
 
     // Older WS handler briefly set devices.status = 'online', which breaks dispatch (expects approved/pending)
@@ -768,14 +771,31 @@ const Devices = {
         });
     },
     findByToken: (token) => getDb().prepare('SELECT * FROM devices WHERE token = ?').get(token),
+    /** Same physical phone reconnecting without a persisted token (or after DB reset) */
+    findByAndroidId: (androidId) => {
+        if (!androidId) return null;
+        return getDb().prepare(
+            'SELECT * FROM devices WHERE android_id = ? ORDER BY last_seen DESC LIMIT 1'
+        ).get(androidId);
+    },
+    setAndroidId: (id, androidId) => {
+        if (!androidId) return;
+        try {
+            getDb().prepare('UPDATE devices SET android_id = ? WHERE id = ? AND (android_id IS NULL OR android_id = \'\')').run(androidId, id);
+        } catch (_) { /* ignore */ }
+    },
     upsert: (dev) => getDb().prepare(`
-        INSERT INTO devices (id, name, token, model, android_version, status, battery, last_seen)
-        VALUES (@id, @name, @token, @model, @android_version, @status, @battery, datetime('now'))
+        INSERT INTO devices (id, name, token, model, android_version, status, battery, last_seen, android_id)
+        VALUES (@id, @name, @token, @model, @android_version, @status, @battery, datetime('now'), @android_id)
         ON CONFLICT(id) DO UPDATE SET
             name = excluded.name, model = excluded.model,
             android_version = excluded.android_version,
-            battery = excluded.battery, last_seen = datetime('now')
-    `).run(dev),
+            battery = excluded.battery, last_seen = datetime('now'),
+            android_id = COALESCE(NULLIF(excluded.android_id, ''), devices.android_id)
+    `).run({
+        ...dev,
+        android_id: (dev.android_id != null && dev.android_id !== '') ? dev.android_id : null,
+    }),
     updateStatus: (id, status) => getDb().prepare(
         "UPDATE devices SET status = ?, last_seen = datetime('now') WHERE id = ?"
     ).run(status, id),
@@ -956,11 +976,12 @@ const Templates = {
 };
 
 // ── API keys ───────────────────────────────────────────────────
+const API_KEY_BCRYPT_COST = 12;
 const ApiKeys = {
     generate: (name, permissions = ['messages:read', 'messages:write']) => {
         const rawKey  = 'apix_' + crypto.randomBytes(32).toString('hex');
         const prefix  = rawKey.slice(0, 14);
-        const hash    = crypto.createHash('sha256').update(rawKey).digest('hex');
+        const hash    = bcrypt.hashSync(rawKey, API_KEY_BCRYPT_COST);
         const id      = 'key_' + Date.now();
         getDb().prepare(`INSERT INTO api_keys (id,name,key_prefix,key_hash,permissions) VALUES (?,?,?,?,?)`
         ).run(id, name, prefix, hash, JSON.stringify(permissions));
@@ -968,13 +989,25 @@ const ApiKeys = {
     },
     verify: (rawKey) => {
         if (!rawKey) return null;
-        const hash = crypto.createHash('sha256').update(rawKey).digest('hex');
-        const row  = getDb().prepare('SELECT * FROM api_keys WHERE key_hash=? AND enabled=1').get(hash);
-        if (row) {
-            getDb().prepare("UPDATE api_keys SET last_used=datetime('now') WHERE id=?").run(row.id);
-            row.permissions = JSON.parse(row.permissions || '[]');
+        const prefix = String(rawKey).slice(0, 14);
+        const legacySha = crypto.createHash('sha256').update(rawKey).digest('hex');
+        const rows = getDb().prepare('SELECT * FROM api_keys WHERE key_prefix=? AND enabled=1').all(prefix);
+        for (const row of rows) {
+            let ok = false;
+            if (row.key_hash && row.key_hash.startsWith('$2')) {
+                try {
+                    ok = bcrypt.compareSync(rawKey, row.key_hash);
+                } catch { ok = false; }
+            } else {
+                ok = row.key_hash === legacySha;
+            }
+            if (ok) {
+                getDb().prepare("UPDATE api_keys SET last_used=datetime('now') WHERE id=?").run(row.id);
+                row.permissions = JSON.parse(row.permissions || '[]');
+                return row;
+            }
         }
-        return row || null;
+        return null;
     },
     findAll: () => getDb().prepare('SELECT id,name,key_prefix,permissions,enabled,last_used,created_at FROM api_keys ORDER BY created_at DESC').all()
         .map(k => ({ ...k, permissions: JSON.parse(k.permissions || '[]') })),

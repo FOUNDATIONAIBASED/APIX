@@ -131,6 +131,14 @@
         <service
             android:name=".feature.gateway.GatewayRelayService"
             android:exported="false" />
+
+        <receiver
+            android:name=".feature.gateway.GatewayBootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
         <activity android:name=".feature.contacts.ContactsActivity" />
 
         <receiver android:name=".receiver.BootReceiver">

@@ -39,6 +39,7 @@ class GatewayActivity : QkThemedActivity() {
         gatewayToken.setText(gatewayPrefs.deviceToken ?: "")
         gatewayPairing.setText(gatewayPrefs.pairingToken ?: "")
         gatewayTls.isChecked = gatewayPrefs.useTls
+        gatewayStartOnBoot.isChecked = gatewayPrefs.startOnBoot
 
         gatewayScanQr.setOnClickListener {
             startActivityForResult(Intent(this, GatewayQrScanActivity::class.java), REQ_QR_SCAN)
@@ -86,6 +87,7 @@ class GatewayActivity : QkThemedActivity() {
         val pair = gatewayPairing.text?.toString()?.trim()
         gatewayPrefs.pairingToken = pair?.takeIf { it.isNotEmpty() }
         gatewayPrefs.useTls = gatewayTls.isChecked
+        gatewayPrefs.startOnBoot = gatewayStartOnBoot.isChecked
     }
 
     private fun refreshStatusText() {

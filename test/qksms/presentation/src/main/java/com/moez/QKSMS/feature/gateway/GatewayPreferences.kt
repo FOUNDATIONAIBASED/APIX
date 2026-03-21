@@ -32,15 +32,20 @@ class GatewayPreferences(context: Context) {
 
     var deviceToken: String?
         get() = prefs.getString(KEY_TOKEN, null)?.takeIf { it.isNotBlank() }
-        set(value) { prefs.edit().putString(KEY_TOKEN, value).apply() }
+        set(value) { prefs.edit().putString(KEY_TOKEN, value).commit() }
 
     var pairingToken: String?
         get() = prefs.getString(KEY_PAIRING, null)?.takeIf { it.isNotBlank() }
-        set(value) { prefs.edit().putString(KEY_PAIRING, value).apply() }
+        set(value) { prefs.edit().putString(KEY_PAIRING, value).commit() }
+
+    /** When true, [GatewayBootReceiver] starts the relay after BOOT_COMPLETED */
+    var startOnBoot: Boolean
+        get() = prefs.getBoolean(KEY_START_ON_BOOT, true)
+        set(value) { prefs.edit().putBoolean(KEY_START_ON_BOOT, value).apply() }
 
     var deviceId: String?
         get() = prefs.getString(KEY_DEVICE_ID, null)
-        set(value) { prefs.edit().putString(KEY_DEVICE_ID, value).apply() }
+        set(value) { prefs.edit().putString(KEY_DEVICE_ID, value).commit() }
 
     /**
      * Last SMS row [_id] from Telephony provider that was forwarded to ApiX (-1 = not bootstrapped).
@@ -58,5 +63,6 @@ class GatewayPreferences(context: Context) {
         private const val KEY_PAIRING = "pairing_token"
         private const val KEY_DEVICE_ID = "device_id"
         private const val KEY_LAST_SMS_ID = "last_sms_content_id"
+        private const val KEY_START_ON_BOOT = "start_on_boot"
     }
 }

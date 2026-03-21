@@ -38,6 +38,7 @@ function clearSessionCookieOpts(req) {
 
 module.exports = {
     isHttpsRequest,
+    sessionCookieShouldBeSecure,
     sessionCookieOpts,
     clearSessionCookieOpts,
 };

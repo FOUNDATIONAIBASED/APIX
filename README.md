@@ -31,6 +31,7 @@ A self-hosted, enterprise-grade SMS/MMS gateway that orchestrates a fleet of And
 - [CI/CD & GitHub Actions](#cicd--github-actions)
 - [Architecture](#architecture)
 - [n8n + webhooks (recipe)](docs/n8n-webhook-recipe.md)
+- [Local wiki (private, not in Git)](docs/wiki-local.md)
 
 ---
 
@@ -383,7 +384,7 @@ ApiX supports three access patterns:
 |--------|-------------------|------------|
 | `DEPLOYMENT_MODE` | `homelab` | `production` |
 | Browser CORS | Permissive (any origin) | Only origins listed in `CORS_ORIGINS` (comma-separated) |
-| API key in URL | `?api_key=` allowed | **Blocked** — use `X-API-Key` or `Authorization: Bearer` |
+| API key in URL | **Not supported** — use `X-API-Key` or `Authorization: Bearer` | **Not supported** |
 | Session cookie `Secure` | Set when the request is HTTPS or `USE_SSL=true` | Same (always use HTTPS in production) |
 
 After the first-time setup wizard, `deployment_mode` is stored in the database and can be changed under **Settings** (`deployment_mode`). **Factory reset** wipes all data, users, devices, settings, SMTP send counters, and local backup files under `data/`, then exits; the server **starts a replacement Node process** after a short delay (so bare `nohup` installs are not left permanently down). If you use **systemd** or **pm2** with automatic restart, set **`FACTORY_RESET_NO_RESTART=true`** in `.env` to avoid two instances.
@@ -458,7 +459,7 @@ server/
 | **Browser session** | Using the web UI; admin-only routes (e.g. multi-SMTP) | Log in via UI or `POST /api/auth/login` → cookie `apix_session` (also returns `token` in JSON for APIs that accept it) |
 | **API key** | Scripts, mobile apps, integrations | Header `X-API-Key: apix_…` or `Authorization: Bearer apix_…` |
 
-In **`DEPLOYMENT_MODE=production`**, putting the API key in the query string (`?api_key=`) is **disabled** — use headers only. See [Deployment mode, CORS, and API keys](#deployment-mode-cors-and-api-keys).
+API keys must be sent with **`X-API-Key`** or **`Authorization: Bearer`** — query-string keys are **not** supported. See [Deployment mode, CORS, and API keys](#deployment-mode-cors-and-api-keys).
 
 #### Health check
 
@@ -541,7 +542,7 @@ curl -s -b cookies.txt -X POST "$BASE/api/auth/email-smtp/test" \
 |---------|----------------|
 | `SSL_ERROR_RX_RECORD_TOO_LONG` in browser | You opened `https://` but the app serves **HTTP**. Use `http://` or terminate TLS in Nginx/Caddy and set `USE_SSL=true`. |
 | CORS errors after moving to production | Set `DEPLOYMENT_MODE=production` and `CORS_ORIGINS` to your exact site origins (comma-separated). |
-| `401` on `?api_key=` in production | Expected — use `X-API-Key` or `Authorization: Bearer`. |
+| `400` / `401` on `?api_key=` | Query-string API keys are not supported — use headers. |
 | Email not sending | `GET /api/auth/email-smtp/usage` (admin); run **Test SMTP** in Settings; confirm `host`/`user`/`pass` and provider rate limits. |
 | “No SMTP” but `.env` has values | DB profiles may override — check Settings → Email / SMTP or `GET /api/auth/email-smtp/config` → `using_env_fallback`. |
 
@@ -598,7 +599,7 @@ The bundled **web UI** also includes features such as:
 **Base URL (typical homelab):** `http://your-server-ip:3000/api/v1/`  
 **HTTPS production:** `https://your-domain/api/v1/` (reverse proxy + `USE_SSL=true` on the app)
 
-**Auth:** `X-API-Key: apix_…` or `Authorization: Bearer apix_…` (avoid `?api_key=` in production).
+**Auth:** `X-API-Key: apix_…` or `Authorization: Bearer apix_…` (query-string keys are not supported).
 
 **Example — send one SMS:**
 

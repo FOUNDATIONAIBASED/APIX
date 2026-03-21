@@ -21,7 +21,8 @@ function buildOpts(profile) {
 }
 
 function fromHeader(profile) {
-    const name = (profile.from_name || 'ApiX Gateway').replace(/"/g, '\\"');
+    const rawName = String(profile.from_name || 'ApiX Gateway');
+    const name = rawName.replace(/[\r\n\x00]/g, ' ').replace(/\\/g, '\\\\').replace(/"/g, '\\"');
     const addr = profile.from || profile.user || 'noreply@localhost';
     return `"${name}" <${addr}>`;
 }

@@ -15,6 +15,7 @@ const { authenticator } = require('@otplib/preset-default');
 const QRCode   = require('qrcode');
 const { Users, Sessions, AuditLog } = require('../db');
 const { sessionCookieOpts } = require('../cookies');
+const { setCsrfCookie } = require('../middleware/csrf');
 const fail2ban = require('../security/fail2banService');
 const { requireAuth } = require('../auth/middleware');
 
@@ -86,12 +87,13 @@ router.post('/disable', requireAuth(), async (req, res) => {
 
     const u = Users.findById(req.user.id);
     if (!u.two_fa_enabled) return res.status(400).json({ error: '2FA is not enabled' });
+    if (!u.two_fa_secret) return res.status(400).json({ error: '2FA secret missing; cannot verify disable' });
 
     const pwOk = await bcrypt.compare(password, u.password_hash);
     if (!pwOk) return res.status(401).json({ error: 'Invalid password' });
 
     // Require TOTP code OR backup code
-    const codeOk = code && authenticator.verify({ token: code.replace(/\s/g,''), secret: u.two_fa_secret });
+    const codeOk = Boolean(code) && authenticator.verify({ token: String(code).replace(/\s/g, ''), secret: u.two_fa_secret });
     if (!codeOk) {
         // Check backup code
         const plain = (code||'').toUpperCase().replace(/\s/g,'');
@@ -169,6 +171,7 @@ router.post('/verify', async (req, res) => {
     fail2ban.onLoginSuccess(req);
 
     const u2 = Users.findById(u.id);
+    setCsrfCookie(req, res);
     res
         .cookie('apix_session', newToken, sessionCookieOpts(req))
         .json({

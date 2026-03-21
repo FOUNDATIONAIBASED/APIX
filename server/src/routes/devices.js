@@ -127,8 +127,15 @@ router.post('/:id/suspend', canManage, (req, res) => {
 
 // DELETE /api/v1/devices/:id  — requires devices:manage
 router.delete('/:id', canManage, (req, res) => {
-    Devices.delete(req.params.id);
-    res.json({ success: true });
+    try {
+        const { removeClient } = require('../ws/handler');
+        removeClient(req.params.id);
+        Devices.delete(req.params.id);
+        res.json({ success: true });
+    } catch (e) {
+        console.error('[devices] DELETE error:', e);
+        res.status(500).json({ error: e.message || 'Failed to delete device' });
+    }
 });
 
 // PATCH /api/v1/devices/:id  — requires devices:manage

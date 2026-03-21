@@ -284,14 +284,14 @@ console.log(await r.json());</pre>
 
     <div class="info">
       <div class="info-icon">ℹ️</div>
-      <div>Pass the API key in the <code>X-API-Key</code> header, or as <code>Authorization: Bearer &lt;key&gt;</code>. You may also use <code>?api_key=&lt;key&gt;</code> in <strong>homelab</strong> mode — see below.</div>
+      <div>Pass the API key in the <code>X-API-Key</code> header, or as <code>Authorization: Bearer &lt;key&gt;</code>. Query-string API keys are <strong>not</strong> supported. Browser sessions use a CSRF cookie (<code>apix_csrf</code>) + <code>X-CSRF-Token</code> header on mutating requests.</div>
     </div>
 
     <div class="ep-section">Deployment mode: homelab vs production</div>
     <table class="pt"><thead><tr><th>Setting</th><th>Homelab (default)</th><th>Production</th></tr></thead><tbody>
       <tr><td><code>DEPLOYMENT_MODE</code> / Settings</td><td><code>homelab</code></td><td><code>production</code></td></tr>
       <tr><td>CORS</td><td>Permissive for local tooling</td><td>Only origins listed in <code>CORS_ORIGINS</code></td></tr>
-      <tr><td><code>?api_key=</code> on URLs</td><td>Allowed (quick tests)</td><td><strong>Blocked</strong> — use headers only</td></tr>
+      <tr><td><code>?api_key=</code> on URLs</td><td colspan="2"><strong>Not supported</strong> — use headers only</td></tr>
       <tr><td>Session cookie <code>Secure</code></td><td>Set when request is HTTPS or <code>USE_SSL=true</code></td><td>Use HTTPS in front; set <code>USE_SSL=true</code> behind a proxy</td></tr>
     </tbody></table>
 

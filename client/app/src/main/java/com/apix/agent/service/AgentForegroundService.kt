@@ -13,6 +13,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.provider.Settings
 import android.telephony.SmsManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
@@ -161,6 +162,10 @@ class AgentForegroundService : Service() {
         prefs.pairingToken?.let {
             payload["pairingToken"] = it
             prefs.pairingToken = null  // consume it
+        }
+        val aid = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
+        if (!aid.isNullOrBlank()) {
+            payload["androidId"] = aid
         }
         wsClient.send(payload)
         dbg("sent register (${simsList.size} SIMs)")

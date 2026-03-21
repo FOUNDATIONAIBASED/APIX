@@ -20,8 +20,8 @@ module.exports = {
     /** Set USE_SSL=true when behind HTTPS reverse proxy (domain binding). Omit or false for HTTP/LAN/IP access. */
     useSsl:             process.env.USE_SSL            === 'true',
     /**
-     * homelab  — permissive CORS; API keys may be passed as ?api_key= (still prefer X-API-Key).
-     * production — strict CORS (requires CORS_ORIGINS); query-string API keys rejected.
+     * homelab  — permissive CORS; API keys via X-API-Key / Authorization only (query-string keys unsupported).
+     * production — strict CORS (requires CORS_ORIGINS).
      * Overridden by Settings key `deployment_mode` after first setup.
      */
     deploymentMode:     (process.env.DEPLOYMENT_MODE || 'homelab').toLowerCase() === 'production'

@@ -109,6 +109,26 @@ textarea{min-height:120px;resize:vertical}
 </div>
 
 <script>
+(function(){
+  const _f = window.fetch;
+  window.fetch = function(input, init) {
+    init = init || {};
+    const method = (init.method || 'GET').toUpperCase();
+    if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+      const m = document.cookie.match(/(?:^|;\s*)apix_csrf=([^;]+)/);
+      if (m) {
+        const token = decodeURIComponent(m[1]);
+        const headers = new Headers(init.headers || {});
+        if (token && !headers.has('X-CSRF-Token')) headers.set('X-CSRF-Token', token);
+        return _f(input, Object.assign({}, init, { headers: headers }));
+      }
+    }
+    return _f(input, init);
+  };
+})();
+function escHtml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+}
 const PRESETS = [
   { name: 'GET /health', method: 'GET', path: '/health', body: '{}' },
   { name: 'GET /api/v1/status', method: 'GET', path: '/api/v1/status', body: '{}' },
@@ -216,7 +236,7 @@ async function sendReq() {
     const text = await r.text();
     const ms = Math.round(performance.now() - t0);
     const badge = r.ok ? '<span class="badge b-ok">' + r.status + '</span>' : '<span class="badge b-err">' + r.status + '</span>';
-    meta.innerHTML = badge + ' <span style="color:var(--tx3);font-family:var(--fm);font-size:11px;">' + ms + ' ms · ' + method + ' ' + path + '</span>';
+    meta.innerHTML = badge + ' <span style="color:var(--tx3);font-family:var(--fm);font-size:11px;">' + escHtml(ms + ' ms · ' + method + ' ' + path) + '</span>';
     try {
       out.textContent = JSON.stringify(JSON.parse(text), null, 2);
     } catch {
