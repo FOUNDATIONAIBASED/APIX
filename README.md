@@ -639,8 +639,10 @@ Workflow: [`.github/workflows/android-build.yml`](.github/workflows/android-buil
 | **`build-client`** | ApiX Agent APK from `client/` — JDK **17**, Gradle wrapper |
 | **`build-qksms`** | ApiX QKSMS fork from `test/qksms/` — JDK **17**, Android SDK **API 33** / build-tools **33.0.2**, Gradle **7.6.x** (wrapper), `:presentation:assembleNoAnalyticsDebug` |
 
-- **Releases:** Pushing a tag `v*` builds both jobs and attaches APKs to a GitHub Release.
-- **Manual runs:** `workflow_dispatch` builds artifacts without requiring a tag.
+- **Branch pushes (`main` / `master`):** Builds both jobs and uploads APKs as **workflow artifacts** (no GitHub Release). Use this for continuous verification after merges.
+- **Releases:** Pushing a tag `v*` runs the same builds **and** the `release` job, which attaches APKs to a **GitHub Release**.
+- **Manual runs:** `workflow_dispatch` builds artifacts (version `dev-<sha>` unless the run is tied to a tag).
+- **Note:** [Code scanning](.github/workflows/codeql.yml) (CodeQL) only analyzes the **Node** gateway in `server/`; it does not build Android clients.
 - **QKSMS signing:** Debug builds use the default debug keystore on the runner. Release signing in CI only applies when a `test/qksms/keystore` file is present and env vars are set (see `test/qksms/presentation/build.gradle` when `CI=true`).
 
 ---

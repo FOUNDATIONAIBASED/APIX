@@ -1,6 +1,6 @@
 {
   "name": "apix-gateway",
-  "version": "0.0.10",
+  "version": "0.0.11",
   "description": "ApiX Gateway — Self-hosted SMS/MMS Gateway Server",
   "main": "src/index.js",
   "engines": {

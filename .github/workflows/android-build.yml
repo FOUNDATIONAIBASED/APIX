@@ -1,8 +1,12 @@
 name: Android Build & Release
 
-# Trigger on version tags (v1.0.0, v2.3.1, etc.) or manual dispatch
+# - Push to main/master: build both APKs + upload workflow artifacts (no GitHub Release).
+# - Push tag v*: same builds + Create GitHub Release (see release job `if:`).
+# - Manual dispatch: same as branch push (dev-* version unless run from a tag ref).
+# CodeQL (server) is a separate workflow and does not replace this one.
 on:
   push:
+    branches: [main, master]
     tags:
       - 'v*'
   workflow_dispatch:
