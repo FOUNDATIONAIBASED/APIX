@@ -149,8 +149,8 @@ async function sendTransactional(opts) {
     const { to, subject, text, html, skipQuota, attachments } = opts;
     const profiles = smtpConfig.getEffectiveProfiles();
     if (!profiles.length) {
-        console.info(`[MAIL] No SMTP configured — would send to ${sanitizeLogFragment(to)}: ${sanitizeLogFragment(subject)}`);
-        if (text) console.info(`[MAIL] body length=${String(text).length} (redacted)`);
+        // Do not log recipient/subject/body (PII); dry-run path only.
+        console.info('[MAIL] No SMTP configured (transactional send skipped)');
         return false;
     }
 

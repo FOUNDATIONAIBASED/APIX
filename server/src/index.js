@@ -33,7 +33,7 @@ try { require('./backup/engine').startScheduler(); } catch (e) { console.warn('[
 const LOG_LEVELS = { error: 0, warn: 1, info: 2, debug: 3 };
 const logLevel   = LOG_LEVELS[cfg.logLevel] ?? 2;
 function sanitizeLogFragment(s) {
-    return String(s ?? '').replace(/[\r\n]/g, ' ').slice(0, 4000);
+    return String(s ?? '').replace(/[\r\n\x00-\x1f\x7f]/g, ' ').slice(0, 4000);
 }
 function _logArg(x) {
     if (x == null) return x;

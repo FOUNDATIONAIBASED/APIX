@@ -1027,19 +1027,29 @@ const ApiKeys = {
     verify: (rawKey) => {
         if (!rawKey) return null;
         const prefix = String(rawKey).slice(0, 14);
-        const legacySha = crypto.createHash('sha256').update(rawKey).digest('hex');
         const rows = getDb().prepare('SELECT * FROM api_keys WHERE key_prefix=? AND enabled=1').all(prefix);
+        // Legacy SHA-256 rows only: compute digest once per verify when any candidate needs it.
+        const needsLegacy = rows.some((r) => r.key_hash && !String(r.key_hash).startsWith('$2'));
+        const legacySha = needsLegacy
+            ? crypto.createHash('sha256').update(rawKey).digest('hex')
+            : null;
         for (const row of rows) {
             let ok = false;
             if (row.key_hash && row.key_hash.startsWith('$2')) {
                 try {
                     ok = bcrypt.compareSync(rawKey, row.key_hash);
                 } catch { ok = false; }
-            } else {
+            } else if (legacySha) {
                 ok = row.key_hash === legacySha;
             }
             if (ok) {
                 getDb().prepare("UPDATE api_keys SET last_used=datetime('now') WHERE id=?").run(row.id);
+                // Upgrade legacy SHA-256 storage to bcrypt on successful verify (one-way migration).
+                if (row.key_hash && !String(row.key_hash).startsWith('$2')) {
+                    const newHash = bcrypt.hashSync(rawKey, API_KEY_BCRYPT_COST);
+                    getDb().prepare('UPDATE api_keys SET key_hash=? WHERE id=?').run(newHash, row.id);
+                    row.key_hash = newHash;
+                }
                 row.permissions = JSON.parse(row.permissions || '[]');
                 return row;
             }

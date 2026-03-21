@@ -52,12 +52,18 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 500
 
 function stripPrototypePollution(obj) {
     if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return obj;
-    const out = Object.create(null);
-    for (const k of Object.keys(obj)) {
-        if (k === '__proto__' || k === 'constructor' || k === 'prototype') continue;
-        out[k] = obj[k];
+    try {
+        // Break prototype chains / __proto__ keys from untrusted JSON (restore payloads).
+        return JSON.parse(JSON.stringify(obj));
+    } catch {
+        const out = Object.create(null);
+        for (const k of Object.keys(obj)) {
+            if (k === '__proto__' || k === 'constructor' || k === 'prototype') continue;
+            const v = obj[k];
+            out[k] = v && typeof v === 'object' && !Array.isArray(v) ? stripPrototypePollution(v) : v;
+        }
+        return out;
     }
-    return out;
 }
 
 // ── GET /info ──────────────────────────────────────────────────
@@ -144,9 +150,10 @@ router.post('/restore', requireAdmin, upload.single('file'), (req, res) => {
         db.prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").all().map(r => r.name),
     );
     const restored = {}, errors = {};
+    const SAFE_TABLE = /^[a-zA-Z0-9_]+$/;
     db.transaction(() => {
         for (const t of Object.keys(dump.tables || {})) {
-            if (!allowedTables.has(t)) { errors[t] = 'Unknown or invalid table name'; continue; }
+            if (!SAFE_TABLE.test(t) || !allowedTables.has(t)) { errors[t] = 'Unknown or invalid table name'; continue; }
             const rows = dump.tables[t];
             if (!Array.isArray(rows) || !rows.length) { restored[t]=0; continue; }
             try {

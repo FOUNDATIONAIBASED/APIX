@@ -121,7 +121,8 @@ function apiKeyAuth(required = true) {
 
         if (!rawKey) {
             if (required) return res.status(401).json({ error: 'API key required. Pass X-API-Key header or Authorization: Bearer.' });
-            return next(); // optional auth: proceed unauthenticated when no key provided
+            // Intentional: routes using apiKeyAuth(false) allow anonymous access when no key is sent.
+            return next();
         }
 
         const key = ApiKeys.verify(rawKey);

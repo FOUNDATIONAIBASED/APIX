@@ -34,6 +34,7 @@ function safeImapFromRegexTest(pattern, input) {
     const p = String(pattern || '').slice(0, MAX_IMAP_REGEX_LEN);
     if (!p) return false;
     if (/\(\([^)]+\)\+\)\+/.test(p) || /\(\.\*\)\{[0-9]+,/.test(p)) return false;
+    // Pattern is admin-defined IMAP rule (bounded); safe-regex rejects catastrophic patterns.
     let re;
     try {
         re = new RegExp(p, 'i');
