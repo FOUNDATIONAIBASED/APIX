@@ -111,7 +111,8 @@ function apiKeyAuth(required = true) {
 
         if (header) {
             rawKey = header.startsWith('Bearer ') ? header.slice(7) : header;
-        } else if (req.query.api_key) {
+        } else if (Object.prototype.hasOwnProperty.call(req.query || {}, 'api_key')) {
+            // Reject without reading the secret value from the query string (no GET logging / accidental leaks).
             return res.status(400).json({
                 error: 'API key in query string is not supported. Use the X-API-Key header or Authorization: Bearer.',
                 code: 'API_KEY_QUERY_UNSUPPORTED',
@@ -120,7 +121,7 @@ function apiKeyAuth(required = true) {
 
         if (!rawKey) {
             if (required) return res.status(401).json({ error: 'API key required. Pass X-API-Key header or Authorization: Bearer.' });
-            return next();
+            return next(); // optional auth: proceed unauthenticated when no key provided
         }
 
         const key = ApiKeys.verify(rawKey);

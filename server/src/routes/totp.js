@@ -11,6 +11,8 @@
 const router   = require('express').Router();
 const crypto   = require('crypto');
 const bcrypt   = require('bcryptjs');
+/** Backup codes are short-lived one-time secrets; use same cost as password hashes (min 10 per OWASP; 12 here). */
+const BACKUP_CODE_BCRYPT_ROUNDS = 12;
 const { authenticator } = require('@otplib/preset-default');
 const QRCode   = require('qrcode');
 const { Users, Sessions, AuditLog } = require('../db');
@@ -68,7 +70,7 @@ router.post('/enable', requireAuth(), (req, res) => {
     }
 
     const plainCodes = genBackupCodes();
-    const hashedCodes = plainCodes.map(c => bcrypt.hashSync(c, 10));
+    const hashedCodes = plainCodes.map(c => bcrypt.hashSync(c, BACKUP_CODE_BCRYPT_ROUNDS));
 
     Users.update(req.user.id, {
         two_fa_enabled: 1,
@@ -121,7 +123,7 @@ router.post('/backup-codes', requireAuth(), async (req, res) => {
     if (!pwOk) return res.status(401).json({ error: 'Invalid password' });
 
     const plainCodes = genBackupCodes();
-    const hashedCodes = plainCodes.map(c => bcrypt.hashSync(c, 10));
+    const hashedCodes = plainCodes.map(c => bcrypt.hashSync(c, BACKUP_CODE_BCRYPT_ROUNDS));
     Users.update(req.user.id, { two_fa_backup_codes: JSON.stringify(hashedCodes) });
 
     AuditLog.log({ user_id: req.user.id, username: req.user.username, action: '2fa.backup_codes_regenerated', ip: req.ip });

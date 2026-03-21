@@ -15,6 +15,7 @@ const {
 } = require('../db');
 const telegram = require('../telegram');
 const scheduler = require('../queue/scheduler');
+const safeRegex = require('safe-regex');
 
 function _attachDir() {
     const d = path.join(path.dirname(cfg.dbPath), 'mail_attach');
@@ -28,13 +29,20 @@ function _attachDir() {
  * @param {object} mail — received_emails_local row shape
  */
 const MAX_IMAP_REGEX_LEN = 256;
-/** Mitigate ReDoS / regex injection: bounded length + no nested quantifier traps (heuristic). */
+/** Mitigate ReDoS / regex injection: bounded length, heuristics, and safe-regex analyzer. */
 function safeImapFromRegexTest(pattern, input) {
     const p = String(pattern || '').slice(0, MAX_IMAP_REGEX_LEN);
     if (!p) return false;
     if (/\(\([^)]+\)\+\)\+/.test(p) || /\(\.\*\)\{[0-9]+,/.test(p)) return false;
+    let re;
     try {
-        return new RegExp(p, 'i').test(String(input || ''));
+        re = new RegExp(p, 'i');
+    } catch {
+        return false;
+    }
+    if (!safeRegex(re)) return false;
+    try {
+        return re.test(String(input || ''));
     } catch {
         return false;
     }

@@ -150,7 +150,7 @@ async function sendTransactional(opts) {
     const profiles = smtpConfig.getEffectiveProfiles();
     if (!profiles.length) {
         console.info(`[MAIL] No SMTP configured — would send to ${sanitizeLogFragment(to)}: ${sanitizeLogFragment(subject)}`);
-        if (text) console.info('[MAIL]', sanitizeLogFragment(text));
+        if (text) console.info(`[MAIL] body length=${String(text).length} (redacted)`);
         return false;
     }
 

@@ -52,7 +52,7 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 500
 
 function stripPrototypePollution(obj) {
     if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return obj;
-    const out = {};
+    const out = Object.create(null);
     for (const k of Object.keys(obj)) {
         if (k === '__proto__' || k === 'constructor' || k === 'prototype') continue;
         out[k] = obj[k];
@@ -145,8 +145,9 @@ router.post('/restore', requireAdmin, upload.single('file'), (req, res) => {
     );
     const restored = {}, errors = {};
     db.transaction(() => {
-        for (const [t, rows] of Object.entries(dump.tables)) {
+        for (const t of Object.keys(dump.tables || {})) {
             if (!allowedTables.has(t)) { errors[t] = 'Unknown or invalid table name'; continue; }
+            const rows = dump.tables[t];
             if (!Array.isArray(rows) || !rows.length) { restored[t]=0; continue; }
             try {
                 const ex = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?").get(t);
@@ -183,6 +184,7 @@ router.post('/restore-db', requireAdmin, upload.single('file'), async (req, res)
     if (!tmp.startsWith(dbDir + path.sep) && tmp !== path.resolve(cfg.dbPath)) {
         return res.status(500).json({ error: 'Invalid restore path' });
     }
+    // Admin-only upload; buffer is SQLite bytes validated below (not executed as code).
     fs.writeFileSync(tmp, req.file.buffer, { mode: 0o600 });
     try {
         const Database = require('better-sqlite3');
@@ -293,11 +295,12 @@ router.put('/destinations/:id', requireAdmin, (req, res) => {
     const dest = BackupDestinations.findById(req.params.id);
     if (!dest) return res.status(404).json({ error: 'Destination not found' });
     const { name, config, enabled } = req.body;
-    // Merge config so secrets not re-sent as *** aren't overwritten
-    let mergedConfig = dest.config || {};
+    // Merge config so secrets not re-sent as *** aren't overwritten (prototype pollution safe)
+    let mergedConfig = { ...(dest.config && typeof dest.config === 'object' ? dest.config : {}) };
     if (config && typeof config === 'object') {
-        for (const [k, v] of Object.entries(config)) {
+        for (const k of Object.keys(config)) {
             if (k === '__proto__' || k === 'constructor' || k === 'prototype') continue;
+            const v = config[k];
             if (v !== '***' && v !== '(file path)') mergedConfig[k] = v;
         }
     }

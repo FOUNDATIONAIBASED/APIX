@@ -90,7 +90,7 @@ function sendMessage(botToken, chatId, text, parseMode = 'HTML') {
                 res.on('end', () => {
                     if (res.statusCode >= 200 && res.statusCode < 300) resolve(true);
                     else {
-                        console.warn('[TELEGRAM]', res.statusCode, buf.slice(0, 200).replace(/\r|\n/g, ' '));
+                        console.warn('[TELEGRAM]', res.statusCode, String(buf.slice(0, 200)).replace(/[\r\n]/g, ' ').slice(0, 300));
                         resolve(false);
                     }
                 });

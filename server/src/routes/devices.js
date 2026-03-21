@@ -4,7 +4,7 @@ const rateLimit = require('express-rate-limit');
 const router  = express.Router();
 const crypto  = require('crypto');
 const os      = require('os');
-const { Devices, PairingTokens, DiscoveryHints } = require('../db');
+const { Devices, PairingTokens, DiscoveryHints, DeviceBatterySamples } = require('../db');
 const { getConnectedDeviceIds }  = require('../ws/handler');
 const { requirePerm, requireAnyRole } = require('../auth/middleware');
 const cfg = require('../config');
@@ -100,6 +100,17 @@ router.post('/verify-token', (req, res) => {
     const { token } = req.body;
     if (!token) return res.status(400).json({ error: 'token required' });
     res.json({ valid: PairingTokens.isValid(token) });
+});
+
+// GET /api/v1/devices/telemetry — battery % history from heartbeats (for Power tab)
+router.get('/telemetry', requirePerm('devices:view'), (req, res) => {
+    const deviceId = req.query.device_id || req.query.deviceId;
+    const hours = Math.min(24 * 14, Math.max(1, parseInt(req.query.hours || '24', 10) || 24));
+    if (!deviceId) return res.status(400).json({ error: 'device_id required' });
+    const dev = Devices.findById(deviceId);
+    if (!dev) return res.status(404).json({ error: 'Device not found' });
+    const samples = DeviceBatterySamples.findRecent(deviceId, hours);
+    res.json({ device_id: deviceId, hours, samples });
 });
 
 // GET /api/v1/devices/:id  — requires devices:view

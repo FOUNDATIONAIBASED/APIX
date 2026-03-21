@@ -1,6 +1,6 @@
 'use strict';
 const { v4: uuidv4 }              = require('uuid');
-const { Devices, Messages, Conversations, OptOuts, PairingTokens, KeywordRules, getDb, IpSecurity } = require('../db');
+const { Devices, Messages, Conversations, OptOuts, PairingTokens, KeywordRules, getDb, IpSecurity, DeviceBatterySamples } = require('../db');
 const { generateDeviceToken }     = require('../auth');
 const cfg                         = require('../config');
 
@@ -57,6 +57,22 @@ function normalizeAndroidId(raw) {
     if (!s) return '';
     if (!/^[a-zA-Z0-9._-]+$/.test(s)) return '';
     return s;
+}
+
+const lastBatterySampleAt = new Map();
+const BATTERY_SAMPLE_INTERVAL_MS = 60_000;
+
+/** Throttled history rows for Power tab charts (one sample per device per minute max). */
+function maybeRecordBatterySample(deviceId, msg) {
+    const now = Date.now();
+    const last = lastBatterySampleAt.get(deviceId) || 0;
+    if (now - last < BATTERY_SAMPLE_INTERVAL_MS) return;
+    lastBatterySampleAt.set(deviceId, now);
+    DeviceBatterySamples.insert(deviceId, {
+        battery: typeof msg.battery === 'number' ? msg.battery : null,
+        signal_level: msg.signal_level != null ? msg.signal_level : null,
+    });
+    if (Math.random() < 0.02) DeviceBatterySamples.pruneOlderThan(7);
 }
 
 // Called from REST to queue a send through a connected device
@@ -178,6 +194,7 @@ function handleConnection(ws, req, emitter) {
                 if (!deviceId) break;
                 const signal = Array.isArray(msg.signal) ? JSON.stringify(msg.signal) : (msg.signal || null);
                 Devices.updateHeartbeat(deviceId, msg.battery, signal, msg.sentToday || 0, msg.receivedToday || 0);
+                try { maybeRecordBatterySample(deviceId, msg); } catch (e) { console.warn('[WS] battery sample:', e.message); }
                 // Update extended device health fields
                 try {
                     const updates = [];

@@ -655,6 +655,17 @@ function migrate(db) {
     `);
 
     db.exec(`
+        CREATE TABLE IF NOT EXISTS device_battery_samples (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            device_id TEXT NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
+            battery INTEGER,
+            signal_level INTEGER,
+            recorded_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        CREATE INDEX IF NOT EXISTS idx_device_battery_samples_d_t ON device_battery_samples(device_id, recorded_at DESC);
+    `);
+
+    db.exec(`
         CREATE TABLE IF NOT EXISTS forwarding_rules (
             id          TEXT PRIMARY KEY,
             user_id     TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -818,6 +829,31 @@ const Devices = {
     setUserId: (id, userId) => getDb().prepare('UPDATE devices SET user_id=? WHERE id=?').run(userId || null, id),
 };
 
+// ── Device battery history (WebSocket heartbeats, throttled) ─────────
+const DeviceBatterySamples = {
+    insert: (deviceId, { battery, signal_level }) => {
+        getDb().prepare(`
+            INSERT INTO device_battery_samples (device_id, battery, signal_level, recorded_at)
+            VALUES (?, ?, ?, datetime('now'))
+        `).run(deviceId, battery ?? null, signal_level ?? null);
+    },
+    findRecent: (deviceId, hours) => {
+        const h = Math.min(24 * 14, Math.max(1, hours || 24));
+        return getDb().prepare(`
+            SELECT battery, signal_level, recorded_at FROM device_battery_samples
+            WHERE device_id = ? AND recorded_at >= datetime('now', ?)
+            ORDER BY recorded_at ASC
+        `).all(deviceId, `-${h} hours`);
+    },
+    /** Remove samples older than N days (called occasionally) */
+    pruneOlderThan: (days) => {
+        const d = Math.max(1, Math.min(90, days || 7));
+        try {
+            getDb().prepare(`DELETE FROM device_battery_samples WHERE recorded_at < datetime('now', ?)`).run(`-${d} days`);
+        } catch (_) { /* ignore */ }
+    },
+};
+
 // ── Message helpers ────────────────────────────────────────────
 const Messages = {
     insert: (msg) => getDb().prepare(`
@@ -976,6 +1012,7 @@ const Templates = {
 };
 
 // ── API keys ───────────────────────────────────────────────────
+/** Bcrypt cost factor for API key hashes (12+ recommended; avoids fast offline guessing). */
 const API_KEY_BCRYPT_COST = 12;
 const ApiKeys = {
     generate: (name, permissions = ['messages:read', 'messages:write']) => {
@@ -2036,5 +2073,6 @@ module.exports = {
     Plans, Users, Sessions, PasswordResets, Roles,
     BackupDestinations, BackupJobs, BackupSchedules,
     AuditLog, KeywordRules, ForwardingRules, ImapAccounts, ReceivedMailLocal, ImapForwardRules, DripSequences,
+    DeviceBatterySamples,
     IpSecurity, DiscoveryHints, LoginFailCounters, UnbanChallenges, SmtpSendLog,
 };

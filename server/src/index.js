@@ -32,15 +32,20 @@ try { require('./backup/engine').startScheduler(); } catch (e) { console.warn('[
 // ── Logger ────────────────────────────────────────────────────
 const LOG_LEVELS = { error: 0, warn: 1, info: 2, debug: 3 };
 const logLevel   = LOG_LEVELS[cfg.logLevel] ?? 2;
-const log = {
-    error: (...a) => logLevel >= 0 && console.error('[ERROR]', ...a),
-    warn:  (...a) => logLevel >= 1 && console.warn ('[WARN ]', ...a),
-    info:  (...a) => logLevel >= 2 && console.info ('[INFO ]', ...a),
-    debug: (...a) => logLevel >= 3 && console.log  ('[DEBUG]', ...a),
-};
 function sanitizeLogFragment(s) {
     return String(s ?? '').replace(/[\r\n]/g, ' ').slice(0, 4000);
 }
+function _logArg(x) {
+    if (x == null) return x;
+    if (typeof x === 'string' || typeof x === 'number' || typeof x === 'boolean') return sanitizeLogFragment(x);
+    try { return sanitizeLogFragment(JSON.stringify(x)); } catch { return '[object]'; }
+}
+const log = {
+    error: (...a) => logLevel >= 0 && console.error('[ERROR]', ...a.map(_logArg)),
+    warn:  (...a) => logLevel >= 1 && console.warn ('[WARN ]', ...a.map(_logArg)),
+    info:  (...a) => logLevel >= 2 && console.info ('[INFO ]', ...a.map(_logArg)),
+    debug: (...a) => logLevel >= 3 && console.log  ('[DEBUG]', ...a.map(_logArg)),
+};
 
 // ── Express app ───────────────────────────────────────────────
 const app    = express();

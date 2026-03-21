@@ -428,6 +428,10 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
       Devices
       <span class="sn-badge green" id="badgeDevices">0</span>
     </div>
+    <div class="sn-item" onclick="goView('power',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/><circle cx="12" cy="12" r="4"/></svg>
+      Power &amp; devices
+    </div>
     <div class="sn-group">Automation</div>
     <div class="sn-item" onclick="goView('mail',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
@@ -705,6 +709,37 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
             <tr><td colspan="9" style="text-align:center;color:var(--tx3);font-size:12px;padding:30px;">Loading…</td></tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- ── POWER / DEVICE ENERGY (battery history from heartbeats) ── -->
+    <div class="view" id="view-power">
+      <div class="sh"><div><div class="sh-t">Power &amp; devices</div><div class="sh-s">Battery % over time from gateway heartbeats — filter by device and window</div></div></div>
+      <div class="panel" style="margin-bottom:14px;">
+        <div class="ph"><div class="ph-t">Filters</div><button type="button" class="btn sm" onclick="loadPowerView()">Refresh</button></div>
+        <div class="pb" style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;">
+          <div>
+            <label class="fl">Device</label>
+            <select class="fi" id="powerDeviceSelect" style="min-width:220px;" onchange="loadPowerView()"></select>
+          </div>
+          <div>
+            <label class="fl">Time window</label>
+            <select class="fi" id="powerHoursSelect" onchange="loadPowerView()">
+              <option value="6">Last 6 hours</option>
+              <option value="24" selected>Last 24 hours</option>
+              <option value="72">Last 3 days</option>
+              <option value="168">Last 7 days</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="ph"><div class="ph-t">Battery % (reported by agent)</div></div>
+        <div class="pb">
+          <canvas id="powerBatteryCanvas" style="width:100%;height:140px;display:block;"></canvas>
+          <p id="powerChartHint" style="font-size:11px;color:var(--tx3);margin-top:10px;line-height:1.5;font-family:var(--fm);">Samples are stored about once per minute per device while connected. Historical rows older than 7 days may be pruned.</p>
+          <p style="font-size:11px;color:var(--tx3);margin-top:8px;line-height:1.5;"><strong>Per-app battery drain</strong> (which app used how much power) is an Android OS feature and isn’t available through this web UI yet; use <em>Settings → Battery</em> on the phone. This chart only reflects the gateway agent’s reported battery level.</p>
+        </div>
       </div>
     </div>
 
@@ -1175,6 +1210,7 @@ message: Your text here…</pre>
       <div class="panel setup-accent ac-tg" style="margin-bottom:14px;">
         <div class="ph"><div class="ph-t">Inbound SMS → Telegram</div><span class="ph-s">Match rules on inbound SMS/MMS</span></div>
         <div class="pb">
+          <p style="font-size:12px;color:var(--tx3);line-height:1.55;margin:0 0 12px 0;">You can add <strong>many</strong> Telegram rules. <strong>Every</strong> rule whose filters match an inbound message will run, in <strong>priority</strong> order (higher number first). Use <strong>Add rule</strong> for each new automation; use <strong>Edit</strong> to change an existing one.</p>
           <div class="g g2" style="gap:10px;">
             <div><label class="fl">Name</label><input class="fi" id="tgFrName" placeholder="e.g. Alerts to Telegram"></div>
             <div><label class="fl">Priority (higher first)</label><input class="fi" id="tgFrPriority" type="number" value="0"></div>
@@ -1185,17 +1221,22 @@ message: Your text here…</pre>
           </div>
           <div style="margin-top:10px;"><label class="fl">Body contains (optional)</label><input class="fi" id="tgFrBody" placeholder="keyword"></div>
           <div style="margin-top:10px;"><label class="fl">Telegram chat ID</label><input class="fi" id="tgFrChat" placeholder="-1001234567890"></div>
-          <button type="button" class="btn p sm" onclick="saveForwardingRuleFor('telegram')" style="margin-top:10px;">Save rule</button>
+          <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            <button type="button" class="btn p sm" onclick="saveForwardingRuleFor('telegram')"><span id="tgFrSaveLabel">Add rule</span></button>
+            <button type="button" class="btn g sm" id="tgFrCancelEdit" style="display:none;" onclick="cancelForwardingEdit('telegram')">Cancel edit</button>
+          </div>
           <div class="ph" style="margin-top:16px;padding-top:0;border:none;"><div class="ph-t">Active rules (Telegram)</div><button type="button" class="btn sm" onclick="loadForwardingRulesFor('telegram','forwardingBodyTelegram')">Refresh</button></div>
-          <div style="overflow-x:auto;"><table class="dt"><thead><tr><th>Name</th><th>Priority</th><th>Destination</th><th>Match</th><th></th></tr></thead><tbody id="forwardingBodyTelegram"></tbody></table></div>
+          <div style="overflow-x:auto;"><table class="dt"><thead><tr><th>On</th><th>Name</th><th>Priority</th><th>Destination</th><th>Match</th><th></th></tr></thead><tbody id="forwardingBodyTelegram"></tbody></table></div>
         </div>
       </div>
 
       <div class="panel setup-accent ac-tg">
         <div class="ph"><div class="ph-t">IMAP → Telegram</div><span class="ph-s">Forward matched mail to Telegram</span></div>
         <div class="pb">
+          <p style="font-size:12px;color:var(--tx3);line-height:1.55;margin:0 0 12px 0;">Add <strong>multiple</strong> IMAP rules; each match can forward to Telegram. Rules are evaluated by <strong>priority</strong>.</p>
           <div class="g g2" style="gap:10px;">
             <div><label class="fl">Name</label><input class="fi" id="tgImapName" placeholder="Forward bank alerts"></div>
+            <div><label class="fl">Priority (higher first)</label><input class="fi" id="tgImapPriority" type="number" value="0"></div>
             <div><label class="fl">IMAP account (empty = all)</label><input class="fi" id="tgImapAccId" placeholder="imap_…"></div>
           </div>
           <div style="margin-top:8px;"><label class="fl"><input type="checkbox" id="tgImapAll"> Match <strong>all</strong> incoming mail (ignore filters below)</label></div>
@@ -1206,11 +1247,12 @@ message: Your text here…</pre>
           </div>
           <div style="margin-top:10px;"><label class="fl">Telegram chat ID</label><input class="fi" id="tgImapChat"></div>
           <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-            <button type="button" class="btn p sm" onclick="saveImapRuleFor('telegram')">Save rule</button>
+            <button type="button" class="btn p sm" onclick="saveImapRuleFor('telegram')"><span id="tgImapSaveLabel">Add rule</span></button>
+            <button type="button" class="btn g sm" id="tgImapCancelEdit" style="display:none;" onclick="cancelImapRuleEdit('telegram')">Cancel edit</button>
             <button type="button" class="btn g sm" onclick="dryRunImapRuleFor('telegram')" title="Test matchers against last 25 messages in local index (no Telegram send)">Dry-run</button>
           </div>
           <div class="ph" style="margin-top:16px;padding-top:0;border:none;"><div class="ph-t">IMAP rules (Telegram)</div><button type="button" class="btn sm" onclick="loadImapRulesFor('telegram','imapRuleBodyTg')">Refresh</button></div>
-          <div style="overflow-x:auto;margin-top:8px;"><table class="dt"><thead><tr><th>Name</th><th>Match</th><th>Dest</th><th></th></tr></thead><tbody id="imapRuleBodyTg"></tbody></table></div>
+          <div style="overflow-x:auto;margin-top:8px;"><table class="dt"><thead><tr><th>On</th><th>Name</th><th>Match</th><th>Dest</th><th></th></tr></thead><tbody id="imapRuleBodyTg"></tbody></table></div>
         </div>
       </div>
     </div>
@@ -1224,6 +1266,7 @@ message: Your text here…</pre>
       <div class="panel setup-accent ac-sms" style="margin-bottom:14px;">
         <div class="ph"><div class="ph-t">Inbound SMS → SMS (forward)</div><span class="ph-s">Match rules on inbound SMS/MMS</span></div>
         <div class="pb">
+          <p style="font-size:12px;color:var(--tx3);line-height:1.55;margin:0 0 12px 0;">Add <strong>multiple</strong> SMS forward rules; <strong>all</strong> matching rules run (priority order). Use <strong>Add rule</strong> for each destination or filter set.</p>
           <div class="g g2" style="gap:10px;">
             <div><label class="fl">Name</label><input class="fi" id="smsFrName" placeholder="e.g. Relay to support"></div>
             <div><label class="fl">Priority (higher first)</label><input class="fi" id="smsFrPriority" type="number" value="0"></div>
@@ -1234,17 +1277,22 @@ message: Your text here…</pre>
           </div>
           <div style="margin-top:10px;"><label class="fl">Body contains (optional)</label><input class="fi" id="smsFrBody" placeholder="keyword"></div>
           <div style="margin-top:10px;"><label class="fl">Forward SMS to number</label><input class="fi" id="smsFrSmsTo" placeholder="+15551234567"></div>
-          <button type="button" class="btn p sm" onclick="saveForwardingRuleFor('sms')" style="margin-top:10px;">Save rule</button>
+          <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            <button type="button" class="btn p sm" onclick="saveForwardingRuleFor('sms')"><span id="smsFrSaveLabel">Add rule</span></button>
+            <button type="button" class="btn g sm" id="smsFrCancelEdit" style="display:none;" onclick="cancelForwardingEdit('sms')">Cancel edit</button>
+          </div>
           <div class="ph" style="margin-top:16px;padding-top:0;border:none;"><div class="ph-t">Active rules (SMS)</div><button type="button" class="btn sm" onclick="loadForwardingRulesFor('sms','forwardingBodySms')">Refresh</button></div>
-          <div style="overflow-x:auto;"><table class="dt"><thead><tr><th>Name</th><th>Priority</th><th>Destination</th><th>Match</th><th></th></tr></thead><tbody id="forwardingBodySms"></tbody></table></div>
+          <div style="overflow-x:auto;"><table class="dt"><thead><tr><th>On</th><th>Name</th><th>Priority</th><th>Destination</th><th>Match</th><th></th></tr></thead><tbody id="forwardingBodySms"></tbody></table></div>
         </div>
       </div>
 
       <div class="panel setup-accent ac-sms">
         <div class="ph"><div class="ph-t">IMAP → SMS</div><span class="ph-s">Forward matched mail to a phone number</span></div>
         <div class="pb">
+          <p style="font-size:12px;color:var(--tx3);line-height:1.55;margin:0 0 12px 0;">Multiple IMAP → SMS rules are supported; set <strong>priority</strong> to control order.</p>
           <div class="g g2" style="gap:10px;">
             <div><label class="fl">Name</label><input class="fi" id="smsImapName" placeholder="Forward receipts"></div>
+            <div><label class="fl">Priority (higher first)</label><input class="fi" id="smsImapPriority" type="number" value="0"></div>
             <div><label class="fl">IMAP account (empty = all)</label><input class="fi" id="smsImapAccId" placeholder="imap_…"></div>
           </div>
           <div style="margin-top:8px;"><label class="fl"><input type="checkbox" id="smsImapAll"> Match <strong>all</strong> incoming mail (ignore filters below)</label></div>
@@ -1255,11 +1303,12 @@ message: Your text here…</pre>
           </div>
           <div style="margin-top:10px;"><label class="fl">SMS to number</label><input class="fi" id="smsImapSmsTo" placeholder="+15551234567"></div>
           <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-            <button type="button" class="btn p sm" onclick="saveImapRuleFor('sms')">Save rule</button>
+            <button type="button" class="btn p sm" onclick="saveImapRuleFor('sms')"><span id="smsImapSaveLabel">Add rule</span></button>
+            <button type="button" class="btn g sm" id="smsImapCancelEdit" style="display:none;" onclick="cancelImapRuleEdit('sms')">Cancel edit</button>
             <button type="button" class="btn g sm" onclick="dryRunImapRuleFor('sms')" title="Test matchers against last 25 messages in local index (no SMS send)">Dry-run</button>
           </div>
           <div class="ph" style="margin-top:16px;padding-top:0;border:none;"><div class="ph-t">IMAP rules (SMS)</div><button type="button" class="btn sm" onclick="loadImapRulesFor('sms','imapRuleBodySms')">Refresh</button></div>
-          <div style="overflow-x:auto;margin-top:8px;"><table class="dt"><thead><tr><th>Name</th><th>Match</th><th>Dest</th><th></th></tr></thead><tbody id="imapRuleBodySms"></tbody></table></div>
+          <div style="overflow-x:auto;margin-top:8px;"><table class="dt"><thead><tr><th>On</th><th>Name</th><th>Match</th><th>Dest</th><th></th></tr></thead><tbody id="imapRuleBodySms"></tbody></table></div>
         </div>
       </div>
     </div>
@@ -1799,6 +1848,7 @@ message: Your text here…</pre>
 })();
 // ════ STATE ════
 let allDevices = [], allNumbers = [], allCampaigns = [], allConversations = [], allMessages = [];
+let _editingForwardingRuleId = null, _editingImapRuleId = null;
 let selectedNums = new Set();
 let currentStep = 0;
 let wizardSchedType = 'immediate';
@@ -1862,7 +1912,7 @@ function goView(id, el){
   removeGate('telegram');
   removeGate('sms');
   const labels={dashboard:'Dashboard',campaigns:'Campaigns',conversations:'Conversations',
-    numbers:'Number Pool',devices:'Devices',settings:'Settings',
+    numbers:'Number Pool',devices:'Devices',power:'Power & devices',settings:'Settings',
     contacts:'Contacts',optouts:'Opt-outs',templates:'Templates',
     mail:'Mail',telegram:'Telegram',sms:'SMS',webhooks:'Webhooks',llm:'AI / LLM',analytics:'Analytics',
     apikeys:'API Keys',scheduled:'Scheduled Messages',
@@ -1882,6 +1932,7 @@ function goView(id, el){
   currentView = id;
   if(id==='numbers')        renderNumberPool();
   if(id==='devices')        { renderDevices(); loadServerConnectionInfo(); }
+  if(id==='power')          loadPowerView();
   if(id==='settings')       renderSettings();
   if(id==='conversations')  renderConversations();
   if(id==='campaigns')      renderCampaigns();
@@ -1945,6 +1996,7 @@ async function loadAll(){
 
     // Refresh current view live data
     if(currentView==='devices')renderDevices();
+    if(currentView==='power')loadPowerView();
     if(currentView==='numbers')renderNumberPool();
     if(currentView==='conversations')renderConversations();
     if(currentView==='campaigns')renderCampaigns();
@@ -4052,38 +4104,175 @@ async function loadSmsHub() {
   await loadAutomationHealth();
 }
 
+async function loadPowerView() {
+  const sel = document.getElementById('powerDeviceSelect');
+  const hoursEl = document.getElementById('powerHoursSelect');
+  if (!sel || !hoursEl) return;
+  try {
+    const r = await fetch('/api/v1/devices', { credentials: 'include' });
+    const d = await r.json();
+    if (!r.ok) { drawPowerBatteryChart([], 'Could not load devices'); return; }
+    const devs = d.devices || [];
+    const cur = sel.value;
+    sel.innerHTML = devs.length
+      ? devs.map((x) => `<option value="${String(x.id).replace(/"/g, '&quot;')}">${escapeHtml(x.name || x.id)}</option>`).join('')
+      : '<option value="">— No devices —</option>';
+    if (cur && devs.some((x) => x.id === cur)) sel.value = cur;
+    else if (devs[0]) sel.value = devs[0].id;
+    const deviceId = sel.value;
+    const hours = Math.min(24 * 14, Math.max(1, parseInt(hoursEl.value || '24', 10) || 24));
+    if (!deviceId) {
+      drawPowerBatteryChart([], 'No device selected');
+      return;
+    }
+    const tr = await fetch('/api/v1/devices/telemetry?device_id=' + encodeURIComponent(deviceId) + '&hours=' + hours, { credentials: 'include' });
+    const td = await tr.json().catch(() => ({}));
+    if (!tr.ok) throw new Error(td.error || 'Telemetry request failed');
+    drawPowerBatteryChart(td.samples || [], null);
+  } catch (e) {
+    console.error(e);
+    drawPowerBatteryChart([], e.message || 'Error');
+  }
+}
+
+function drawPowerBatteryChart(samples, errMsg) {
+  const canvas = document.getElementById('powerBatteryCanvas');
+  if (!canvas) return;
+  const parent = canvas.parentElement || canvas;
+  const W = Math.max(320, parent.clientWidth || 600);
+  const H = 140;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = 'rgba(15,23,42,.4)';
+  ctx.fillRect(0, 0, W, H);
+  if (errMsg) {
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '12px ui-sans-serif,system-ui,sans-serif';
+    ctx.fillText(String(errMsg), 12, 28);
+    return;
+  }
+  const valid = (samples || []).map((s) => {
+    const t = new Date(s.recorded_at).getTime();
+    const b = s.battery;
+    return { t, b };
+  }).filter((p) => !isNaN(p.t) && p.b != null && !isNaN(Number(p.b)));
+  if (!valid.length) {
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '12px ui-sans-serif,system-ui,sans-serif';
+    ctx.fillText('No battery samples in this window — connect a device and wait for heartbeats (~1 sample/min).', 12, 28);
+    return;
+  }
+  const t0 = valid[0].t;
+  const t1 = valid[valid.length - 1].t;
+  const span = Math.max(t1 - t0, 60000);
+  ctx.strokeStyle = 'rgba(148,163,184,.2)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = 10 + (i / 4) * (H - 40);
+    ctx.beginPath();
+    ctx.moveTo(44, y);
+    ctx.lineTo(W - 8, y);
+    ctx.stroke();
+    ctx.fillStyle = '#64748b';
+    ctx.font = '10px monospace';
+    ctx.fillText(String(100 - i * 25) + '%', 6, y + 3);
+  }
+  ctx.strokeStyle = '#38bdf8';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  valid.forEach((p, i) => {
+    const x = 44 + ((p.t - t0) / span) * (W - 52);
+    const y = 10 + (1 - Number(p.b) / 100) * (H - 40);
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+  ctx.fillStyle = '#7dd3fc';
+  valid.forEach((p) => {
+    const x = 44 + ((p.t - t0) / span) * (W - 52);
+    const y = 10 + (1 - Number(p.b) / 100) * (H - 40);
+    ctx.beginPath();
+    ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
 async function loadForwardingRulesFor(channel, tbodyId) {
   const tb = document.getElementById(tbodyId);
   if (!tb) return;
   if (_currentUser?.role !== 'admin' && !_currentPlan?.features?.forwarding_rules) {
-    tb.innerHTML = '<tr><td colspan="5" style="color:var(--tx3);font-size:12px;">Add the <strong>Forwarding rules</strong> plan feature to use inbound SMS forwarding.</td></tr>';
+    tb.innerHTML = '<tr><td colspan="6" style="color:var(--tx3);font-size:12px;">Add the <strong>Forwarding rules</strong> plan feature to use inbound SMS forwarding.</td></tr>';
     return;
   }
   let d;
   try {
     const r = await fetch('/api/v1/forwarding/rules', { credentials: 'include' });
     d = await r.json();
-    if (r.status === 402) { tb.innerHTML = '<tr><td colspan="5" style="color:var(--c5);">Upgrade plan for forwarding</td></tr>'; return; }
+    if (r.status === 402) { tb.innerHTML = '<tr><td colspan="6" style="color:var(--c5);">Upgrade plan for forwarding</td></tr>'; return; }
   } catch (e) {
-    tb.innerHTML = '<tr><td colspan="5" style="color:var(--c6);">Failed to load</td></tr>';
+    tb.innerHTML = '<tr><td colspan="6" style="color:var(--c6);">Failed to load</td></tr>';
     return;
   }
   const rules = (d.rules || []).filter(x => x.channel === channel);
   if (!rules.length) {
-    tb.innerHTML = '<tr><td colspan="5" style="color:var(--tx3);font-size:12px;">No rules yet.</td></tr>';
+    tb.innerHTML = '<tr><td colspan="6" style="color:var(--tx3);font-size:12px;">No rules yet — use <strong>Add rule</strong> above to create one.</td></tr>';
     return;
   }
   tb.innerHTML = rules.map(r => {
     const dest = r.channel === 'telegram' ? (r.dest_telegram_chat_id || '—') : (r.dest_sms_to || '—');
     const m = [r.match_from_regex, r.match_to_regex, r.match_body_contains].filter(Boolean).join(' · ') || '—';
+    const on = r.enabled !== false && r.enabled !== 0;
     return `<tr>
+      <td><input type="checkbox" ${on ? 'checked' : ''} onchange="toggleForwardingRuleEnabled('${r.id}', this.checked)" title="Enable/disable" /></td>
       <td style="font-weight:600;">${escapeHtml(r.name||'')}</td>
       <td style="font-family:var(--fm);">${r.priority}</td>
       <td style="font-family:var(--fm);font-size:11px;color:var(--c3);">${escapeHtml(String(dest))}</td>
       <td style="font-size:11px;color:var(--tx3);max-width:200px;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(m)}</td>
-      <td><button class="btn danger xs" onclick="deleteForwardingRule('${r.id}')">Delete</button></td>
+      <td style="white-space:nowrap;"><button type="button" class="btn g xs" onclick="editForwardingRule('${r.id}','${channel}')">Edit</button> <button class="btn danger xs" onclick="deleteForwardingRule('${r.id}')">Delete</button></td>
     </tr>`;
   }).join('');
+}
+
+async function toggleForwardingRuleEnabled(id, enabled) {
+  const res = await fetch('/api/v1/forwarding/rules/' + encodeURIComponent(id), {
+    method: 'PATCH', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ enabled: !!enabled }),
+  });
+  if (!res.ok) toast((await res.json().catch(() => ({}))).error || 'Update failed', 'red');
+}
+
+async function editForwardingRule(id, channel) {
+  const r = await fetch('/api/v1/forwarding/rules', { credentials: 'include' }).then(x => x.json()).catch(() => ({}));
+  const rule = (r.rules || []).find(x => x.id === id);
+  if (!rule) { toast('Rule not found', 'red'); return; }
+  const ids = _forwardingFieldIds(channel);
+  document.getElementById(ids.name).value = rule.name || '';
+  document.getElementById(ids.priority).value = rule.priority ?? 0;
+  document.getElementById(ids.from).value = rule.match_from_regex || '';
+  document.getElementById(ids.to).value = rule.match_to_regex || '';
+  document.getElementById(ids.body).value = rule.match_body_contains || '';
+  if (channel === 'telegram') document.getElementById(ids.chat).value = rule.dest_telegram_chat_id || '';
+  else document.getElementById(ids.smsTo).value = rule.dest_sms_to || '';
+  _editingForwardingRuleId = id;
+  document.getElementById(channel === 'telegram' ? 'tgFrSaveLabel' : 'smsFrSaveLabel').textContent = 'Update rule';
+  document.getElementById(channel === 'telegram' ? 'tgFrCancelEdit' : 'smsFrCancelEdit').style.display = 'inline-block';
+}
+
+function cancelForwardingEdit(channel) {
+  _editingForwardingRuleId = null;
+  const ids = _forwardingFieldIds(channel);
+  ['name','priority','from','to','body'].forEach(k => { const el = document.getElementById(ids[k]); if (el) el.value = k === 'priority' ? '0' : ''; });
+  if (channel === 'telegram') { document.getElementById(ids.chat).value = ''; }
+  else document.getElementById(ids.smsTo).value = '';
+  document.getElementById(channel === 'telegram' ? 'tgFrSaveLabel' : 'smsFrSaveLabel').textContent = 'Add rule';
+  document.getElementById(channel === 'telegram' ? 'tgFrCancelEdit' : 'smsFrCancelEdit').style.display = 'none';
 }
 
 function _forwardingFieldIds(channel) {
@@ -4105,14 +4294,18 @@ async function saveForwardingRuleFor(channel) {
     dest_telegram_chat_id: channel === 'telegram' ? (document.getElementById(ids.chat)?.value?.trim() || undefined) : undefined,
     dest_sms_to: channel === 'sms' ? (document.getElementById(ids.smsTo)?.value?.trim() || undefined) : undefined,
   };
-  const res = await fetch('/api/v1/forwarding/rules', {
-    method: 'POST', credentials: 'include',
+  const isEdit = _editingForwardingRuleId && _editingForwardingRuleId.length;
+  const url = isEdit ? ('/api/v1/forwarding/rules/' + encodeURIComponent(_editingForwardingRuleId)) : '/api/v1/forwarding/rules';
+  const res = await fetch(url, {
+    method: isEdit ? 'PATCH' : 'POST', credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
   const d = await res.json().catch(() => ({}));
   if (res.ok) {
-    toast('Rule saved');
+    toast(isEdit ? 'Rule updated' : 'Rule saved');
+    _editingForwardingRuleId = null;
+    cancelForwardingEdit(channel);
     await loadForwardingRulesFor('telegram', 'forwardingBodyTelegram');
     await loadForwardingRulesFor('sms', 'forwardingBodySms');
   } else toast(d.error || 'Failed', 'red');
@@ -4299,31 +4492,77 @@ async function deleteImapLocalMsg(id) {
 
 function _imapRuleFieldIds(channel) {
   if (channel === 'telegram') {
-    return { name: 'tgImapName', acc: 'tgImapAccId', all: 'tgImapAll', from: 'tgImapFrom', sub: 'tgImapSub', body: 'tgImapBody', chat: 'tgImapChat', smsTo: null };
+    return { name: 'tgImapName', acc: 'tgImapAccId', all: 'tgImapAll', from: 'tgImapFrom', sub: 'tgImapSub', body: 'tgImapBody', chat: 'tgImapChat', smsTo: null, priority: 'tgImapPriority' };
   }
-  return { name: 'smsImapName', acc: 'smsImapAccId', all: 'smsImapAll', from: 'smsImapFrom', sub: 'smsImapSub', body: 'smsImapBody', chat: null, smsTo: 'smsImapSmsTo' };
+  return { name: 'smsImapName', acc: 'smsImapAccId', all: 'smsImapAll', from: 'smsImapFrom', sub: 'smsImapSub', body: 'smsImapBody', chat: null, smsTo: 'smsImapSmsTo', priority: 'smsImapPriority' };
 }
 
 async function loadImapRulesFor(channel, tbodyId) {
   const tb = document.getElementById(tbodyId);
   if (!tb) return;
   if (_currentUser?.role !== 'admin' && !_currentPlan?.features?.imap_mail) {
-    tb.innerHTML = '<tr><td colspan="4" style="color:var(--tx3);font-size:12px;">Add <strong>Email &amp; IMAP</strong> to use mail-based rules.</td></tr>';
+    tb.innerHTML = '<tr><td colspan="5" style="color:var(--tx3);font-size:12px;">Add <strong>Email &amp; IMAP</strong> to use mail-based rules.</td></tr>';
     return;
   }
   const d = await fetch('/api/v1/mail/imap-rules', { credentials: 'include' }).then(r => r.json()).catch(() => ({}));
   const rows = (d.rules || []).filter(r => r.channel === channel);
-  if (!rows.length) { tb.innerHTML = '<tr><td colspan="4" style="color:var(--tx3);font-size:12px;">No rules.</td></tr>'; return; }
+  if (!rows.length) { tb.innerHTML = '<tr><td colspan="5" style="color:var(--tx3);font-size:12px;">No rules — use <strong>Add rule</strong> above.</td></tr>'; return; }
   tb.innerHTML = rows.map(r => {
     const dest = r.channel === 'telegram' ? (r.dest_telegram_chat_id || '—') : (r.dest_sms_to || '—');
     const mf = [r.match_all ? 'ALL' : '', r.match_from_regex, r.match_subject_contains, r.match_body_contains].filter(Boolean).join(' · ');
+    const on = r.enabled !== false && r.enabled !== 0;
     return `<tr>
+      <td><input type="checkbox" ${on ? 'checked' : ''} onchange="toggleImapRuleEnabled('${r.id}', this.checked)" /></td>
       <td>${escapeHtml(r.name)}</td>
       <td style="font-size:11px;color:var(--tx3);max-width:180px;">${escapeHtml(mf || '—')}</td>
       <td style="font-family:var(--fm);font-size:11px;">${escapeHtml(String(dest))}</td>
-      <td><button class="btn danger xs" onclick="deleteImapRule('${r.id}')">Delete</button></td>
+      <td style="white-space:nowrap;"><button type="button" class="btn g xs" onclick="editImapRule('${r.id}','${channel}')">Edit</button> <button class="btn danger xs" onclick="deleteImapRule('${r.id}')">Delete</button></td>
     </tr>`;
   }).join('');
+}
+
+async function toggleImapRuleEnabled(id, enabled) {
+  const res = await fetch('/api/v1/mail/imap-rules/' + encodeURIComponent(id), {
+    method: 'PATCH', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ enabled: !!enabled }),
+  });
+  if (!res.ok) toast((await res.json().catch(() => ({}))).error || 'Update failed', 'red');
+}
+
+async function editImapRule(id, channel) {
+  const d = await fetch('/api/v1/mail/imap-rules', { credentials: 'include' }).then(r => r.json()).catch(() => ({}));
+  const rule = (d.rules || []).find(x => x.id === id);
+  if (!rule) { toast('Rule not found', 'red'); return; }
+  const ids = _imapRuleFieldIds(channel);
+  document.getElementById(ids.name).value = rule.name || '';
+  document.getElementById(ids.priority).value = rule.priority ?? 0;
+  document.getElementById(ids.acc).value = rule.imap_account_id || '';
+  document.getElementById(ids.all).checked = !!rule.match_all;
+  document.getElementById(ids.from).value = rule.match_from_regex || '';
+  document.getElementById(ids.sub).value = rule.match_subject_contains || '';
+  document.getElementById(ids.body).value = rule.match_body_contains || '';
+  if (channel === 'telegram') document.getElementById(ids.chat).value = rule.dest_telegram_chat_id || '';
+  else document.getElementById(ids.smsTo).value = rule.dest_sms_to || '';
+  _editingImapRuleId = id;
+  document.getElementById(channel === 'telegram' ? 'tgImapSaveLabel' : 'smsImapSaveLabel').textContent = 'Update rule';
+  document.getElementById(channel === 'telegram' ? 'tgImapCancelEdit' : 'smsImapCancelEdit').style.display = 'inline-block';
+}
+
+function cancelImapRuleEdit(channel) {
+  _editingImapRuleId = null;
+  const ids = _imapRuleFieldIds(channel);
+  document.getElementById(ids.name).value = '';
+  document.getElementById(ids.priority).value = '0';
+  document.getElementById(ids.acc).value = '';
+  document.getElementById(ids.all).checked = false;
+  document.getElementById(ids.from).value = '';
+  document.getElementById(ids.sub).value = '';
+  document.getElementById(ids.body).value = '';
+  if (channel === 'telegram') document.getElementById(ids.chat).value = '';
+  else document.getElementById(ids.smsTo).value = '';
+  document.getElementById(channel === 'telegram' ? 'tgImapSaveLabel' : 'smsImapSaveLabel').textContent = 'Add rule';
+  document.getElementById(channel === 'telegram' ? 'tgImapCancelEdit' : 'smsImapCancelEdit').style.display = 'none';
 }
 
 async function saveImapRuleFor(channel) {
@@ -4338,12 +4577,16 @@ async function saveImapRuleFor(channel) {
     match_body_contains: document.getElementById(ids.body)?.value?.trim() || undefined,
     dest_telegram_chat_id: channel === 'telegram' ? (document.getElementById(ids.chat)?.value?.trim() || undefined) : undefined,
     dest_sms_to: channel === 'sms' ? (document.getElementById(ids.smsTo)?.value?.trim() || undefined) : undefined,
-    priority: 0,
+    priority: parseInt(document.getElementById(ids.priority)?.value || '0', 10) || 0,
   };
-  const res = await fetch('/api/v1/mail/imap-rules', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const isEdit = _editingImapRuleId && _editingImapRuleId.length;
+  const url = isEdit ? ('/api/v1/mail/imap-rules/' + encodeURIComponent(_editingImapRuleId)) : '/api/v1/mail/imap-rules';
+  const res = await fetch(url, { method: isEdit ? 'PATCH' : 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   const d = await res.json().catch(() => ({}));
   if (res.ok) {
-    toast('Rule saved');
+    toast(isEdit ? 'Rule updated' : 'Rule saved');
+    _editingImapRuleId = null;
+    cancelImapRuleEdit(channel);
     await loadImapRulesFor('telegram', 'imapRuleBodyTg');
     await loadImapRulesFor('sms', 'imapRuleBodySms');
   } else toast(d.error || 'Failed', 'red');
@@ -5424,7 +5667,7 @@ async function loadSystemInfo() {
 (()=>{
 const VIEWS = [
   {label:'Dashboard',id:'dashboard'},{label:'Campaigns',id:'campaigns'},{label:'Conversations',id:'conversations'},
-  {label:'Number Pool',id:'numbers'},{label:'Devices',id:'devices'},{label:'Settings',id:'settings'},
+  {label:'Number Pool',id:'numbers'},{label:'Devices',id:'devices'},{label:'Power & devices',id:'power'},{label:'Settings',id:'settings'},
   {label:'Contacts',id:'contacts'},{label:'Opt-outs',id:'optouts'},{label:'Templates',id:'templates'},
   {label:'Mail',id:'mail'},{label:'Telegram',id:'telegram'},{label:'SMS automation',id:'sms'},
   {label:'Webhooks',id:'webhooks'},{label:'AI / LLM',id:'llm'},{label:'Analytics',id:'analytics'},

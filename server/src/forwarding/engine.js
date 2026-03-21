@@ -53,9 +53,12 @@ async function processInbound(data) {
     const plan = user.plan_id ? Plans.findById(user.plan_id) : Plans.getDefault();
     if (!plan?.features?.forwarding_rules) return;
 
-    const rules = ForwardingRules.findByUser(dev.user_id).filter(r => r.enabled);
+    const rules = ForwardingRules.findByUser(dev.user_id)
+        .filter(r => r.enabled)
+        .sort((a, b) => (b.priority || 0) - (a.priority || 0));
     if (!rules.length) return;
 
+    // All matching rules run (not first-match-only). Higher priority runs first.
     for (const rule of rules) {
         if (!_matchRule(rule, data)) continue;
 

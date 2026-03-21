@@ -33,6 +33,7 @@
     "node-cron": "^3.0.3",
     "nodemailer": "^8.0.2",
     "qrcode": "^1.5.4",
+    "safe-regex": "^2.1.1",
     "semver": "^7.7.4",
     "ssh2-sftp-client": "^12.1.0",
     "uuid": "^9.0.1",
@@ -46,5 +47,8 @@
     "ollama",
     "twilio"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "overrides": {
+    "fast-xml-parser": "5.5.8"
+  }
 }
