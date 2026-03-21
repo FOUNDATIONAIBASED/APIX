@@ -1,0 +1,4 @@
+# Used with source-root: server in the workflow — only ignore noise under that tree.
+name: apix-gateway
+paths-ignore:
+  - "**/node_modules/**"
