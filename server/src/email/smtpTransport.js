@@ -49,6 +49,7 @@ async function sendMail(profile, mail) {
         html: mail.html,
     };
     if (profile.reply_to) msg.replyTo = profile.reply_to;
+    if (mail.attachments?.length) msg.attachments = mail.attachments;
     await t.sendMail(msg);
 }
 

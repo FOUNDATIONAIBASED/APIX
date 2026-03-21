@@ -2,6 +2,7 @@
 require('dotenv').config();
 
 const http        = require('http');
+const cron        = require('node-cron');
 const express     = require('express');
 const cookieParser = require('cookie-parser');
 const { WebSocketServer } = require('ws');
@@ -106,6 +107,8 @@ app.use('/api/v1/backup',         require('./routes/backup'));
 app.use('/api/v1/admin',          require('./routes/admin'));
 app.use('/api/v1/admin/security', require('./routes/securityAdmin'));
 app.use('/api/v1/keyword-rules',  require('./routes/keyword-rules'));
+app.use('/api/v1/forwarding',     require('./routes/forwarding'));
+app.use('/api/v1/mail',           require('./routes/mail'));
 app.use('/api/v1/drip',           publicApiAuth, require('./routes/drip'));
 
 // ── Plans page ────────────────────────────────────────────────
@@ -232,6 +235,16 @@ emitter.on('message:inbound', async (data) => {
         }
     } catch (e) { log.debug('Telegram forward:', e.message); }
 
+    // Per-user forwarding rules (plan-gated; uses devices.user_id)
+    try {
+        await require('./forwarding/engine').processInbound(data);
+    } catch (e) { log.debug('Forwarding rules:', e.message); }
+
+    // SMS/MMS → email ($#email: / email: …) plan imap_mail
+    try {
+        await require('./sms/smsToEmail').processInbound(data);
+    } catch (e) { log.debug('SMS→email:', e.message); }
+
     // LLM auto-reply
     try {
         const result = await llmManager.processInbound(data);
@@ -297,6 +310,11 @@ server.listen(cfg.port, cfg.host, () => {
     scheduler.init(wsHandler, emitter);
     llmManager.start();
     if (cfg.mdnsEnabled) startMdns(cfg.port);
+
+    // IMAP polling (per-account interval respected inside syncAll)
+    cron.schedule('* * * * *', () => {
+        require('./email/imapSync').syncAll().catch((e) => log.debug('[IMAP poll]', e.message));
+    });
 });
 
 process.on('SIGTERM', graceful);

@@ -600,6 +600,7 @@ function migrate(db) {
         "ALTER TABLE devices ADD COLUMN signal_level INTEGER",
         "ALTER TABLE devices ADD COLUMN sim_slots TEXT DEFAULT '[]'",
         "ALTER TABLE devices ADD COLUMN app_version TEXT",
+        "ALTER TABLE devices ADD COLUMN user_id TEXT",
         "ALTER TABLE users ADD COLUMN must_change_password INTEGER DEFAULT 0",
     ];
     for (const sql of safeCols) {
@@ -643,6 +644,105 @@ function migrate(db) {
             sent_at TEXT NOT NULL
         );
         CREATE INDEX IF NOT EXISTS idx_smtp_send_profile_time ON smtp_send_log(profile_id, sent_at);
+    `);
+
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS forwarding_rules (
+            id          TEXT PRIMARY KEY,
+            user_id     TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            name        TEXT NOT NULL DEFAULT 'Rule',
+            enabled     INTEGER NOT NULL DEFAULT 1,
+            channel     TEXT NOT NULL CHECK(channel IN ('telegram','sms')),
+            priority    INTEGER NOT NULL DEFAULT 0,
+            match_from_regex TEXT,
+            match_to_regex   TEXT,
+            match_body_contains TEXT,
+            dest_telegram_chat_id TEXT,
+            dest_sms_to TEXT,
+            created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        CREATE INDEX IF NOT EXISTS idx_forwarding_user ON forwarding_rules(user_id, enabled);
+    `);
+
+    // Merge new plan feature keys into existing DB rows (Plans.seed only inserts missing plans)
+    try {
+        const mergeFw = { plan_free: false, plan_standard: true, plan_enterprise: true };
+        for (const [pid, val] of Object.entries(mergeFw)) {
+            const row = db.prepare('SELECT features FROM plans WHERE id=?').get(pid);
+            if (!row) continue;
+            let f = {};
+            try { f = JSON.parse(row.features || '{}'); } catch { f = {}; }
+            if (f.forwarding_rules === undefined) {
+                f.forwarding_rules = val;
+                db.prepare('UPDATE plans SET features=? WHERE id=?').run(JSON.stringify(f), pid);
+            }
+        }
+        const mergeImap = { plan_free: false, plan_standard: true, plan_enterprise: true };
+        for (const [pid, val] of Object.entries(mergeImap)) {
+            const row = db.prepare('SELECT features FROM plans WHERE id=?').get(pid);
+            if (!row) continue;
+            let f = {};
+            try { f = JSON.parse(row.features || '{}'); } catch { f = {}; }
+            if (f.imap_mail === undefined) {
+                f.imap_mail = val;
+                db.prepare('UPDATE plans SET features=? WHERE id=?').run(JSON.stringify(f), pid);
+            }
+        }
+    } catch (_) { /* ignore */ }
+
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS imap_accounts (
+            id          TEXT PRIMARY KEY,
+            user_id     TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            name        TEXT NOT NULL DEFAULT 'IMAP',
+            host        TEXT NOT NULL,
+            port        INTEGER NOT NULL DEFAULT 993,
+            username    TEXT NOT NULL,
+            password_enc TEXT NOT NULL,
+            tls         INTEGER NOT NULL DEFAULT 1,
+            mailbox     TEXT NOT NULL DEFAULT 'INBOX',
+            poll_interval_sec INTEGER NOT NULL DEFAULT 120,
+            enabled     INTEGER NOT NULL DEFAULT 1,
+            last_uid    INTEGER NOT NULL DEFAULT 0,
+            last_sync_at TEXT,
+            created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        CREATE INDEX IF NOT EXISTS idx_imap_accounts_user ON imap_accounts(user_id);
+
+        CREATE TABLE IF NOT EXISTS received_emails_local (
+            id          TEXT PRIMARY KEY,
+            user_id     TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            imap_account_id TEXT NOT NULL REFERENCES imap_accounts(id) ON DELETE CASCADE,
+            imap_uid    INTEGER NOT NULL,
+            from_addr   TEXT,
+            subject     TEXT,
+            body_text   TEXT,
+            snippet     TEXT,
+            received_at TEXT NOT NULL,
+            local_deleted INTEGER NOT NULL DEFAULT 0,
+            has_attachments INTEGER NOT NULL DEFAULT 0,
+            attachment_paths TEXT DEFAULT '[]',
+            UNIQUE(imap_account_id, imap_uid)
+        );
+        CREATE INDEX IF NOT EXISTS idx_recv_mail_user ON received_emails_local(user_id, local_deleted, received_at DESC);
+
+        CREATE TABLE IF NOT EXISTS imap_forward_rules (
+            id          TEXT PRIMARY KEY,
+            user_id     TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            imap_account_id TEXT REFERENCES imap_accounts(id) ON DELETE CASCADE,
+            name        TEXT NOT NULL DEFAULT 'Rule',
+            enabled     INTEGER NOT NULL DEFAULT 1,
+            match_all   INTEGER NOT NULL DEFAULT 0,
+            match_from_regex TEXT,
+            match_subject_contains TEXT,
+            match_body_contains TEXT,
+            channel     TEXT NOT NULL CHECK(channel IN ('telegram','sms')),
+            dest_telegram_chat_id TEXT,
+            dest_sms_to TEXT,
+            priority    INTEGER NOT NULL DEFAULT 0,
+            created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        CREATE INDEX IF NOT EXISTS idx_imap_fwd_user ON imap_forward_rules(user_id, enabled);
     `);
 }
 
@@ -690,6 +790,7 @@ const Devices = {
     },
     delete: (id) => getDb().prepare('DELETE FROM devices WHERE id = ?').run(id),
     pendingCount: () => getDb().prepare("SELECT COUNT(*) AS n FROM devices WHERE status='pending'").get().n,
+    setUserId: (id, userId) => getDb().prepare('UPDATE devices SET user_id=? WHERE id=?').run(userId || null, id),
 };
 
 // ── Message helpers ────────────────────────────────────────────
@@ -1197,6 +1298,120 @@ const AuditLog = {
     purgeOlderThan: (days) => getDb().prepare("DELETE FROM audit_logs WHERE created_at < datetime('now',?)").run(`-${days} days`),
 };
 
+// ── Per-user inbound forwarding rules (Telegram / SMS) ─────────
+const ForwardingRules = {
+    findByUser: (userId) => getDb().prepare(
+        'SELECT * FROM forwarding_rules WHERE user_id=? ORDER BY priority DESC, created_at ASC'
+    ).all(userId),
+    findByIdForUser: (id, userId) => getDb().prepare(
+        'SELECT * FROM forwarding_rules WHERE id=? AND user_id=?'
+    ).get(id, userId),
+    insert: (r) => getDb().prepare(`
+        INSERT INTO forwarding_rules (id,user_id,name,enabled,channel,priority,match_from_regex,match_to_regex,match_body_contains,dest_telegram_chat_id,dest_sms_to)
+        VALUES (@id,@user_id,@name,@enabled,@channel,@priority,@match_from_regex,@match_to_regex,@match_body_contains,@dest_telegram_chat_id,@dest_sms_to)
+    `).run({
+        ...r,
+        enabled: r.enabled !== false ? 1 : 0,
+        priority: r.priority ?? 0,
+        name: r.name || 'Rule',
+    }),
+    update: (id, userId, r) => {
+        const sets = []; const vals = { id, user_id: userId };
+        const map = ['name', 'enabled', 'channel', 'priority', 'match_from_regex', 'match_to_regex', 'match_body_contains', 'dest_telegram_chat_id', 'dest_sms_to'];
+        for (const k of map) {
+            if (r[k] !== undefined) {
+                sets.push(`${k}=@${k}`);
+                vals[k] = k === 'enabled' ? (r[k] ? 1 : 0) : r[k];
+            }
+        }
+        if (!sets.length) return;
+        getDb().prepare(`UPDATE forwarding_rules SET ${sets.join(',')} WHERE id=@id AND user_id=@user_id`).run(vals);
+    },
+    delete: (id, userId) => getDb().prepare('DELETE FROM forwarding_rules WHERE id=? AND user_id=?').run(id, userId).changes,
+    deleteAllForUser: (userId) => getDb().prepare('DELETE FROM forwarding_rules WHERE user_id=?').run(userId),
+};
+
+// ── IMAP accounts & local mailbox ───────────────────────────────
+const ImapAccounts = {
+    findByUser: (userId) => getDb().prepare('SELECT * FROM imap_accounts WHERE user_id=? ORDER BY created_at DESC').all(userId),
+    findByIdForUser: (id, userId) => getDb().prepare('SELECT * FROM imap_accounts WHERE id=? AND user_id=?').get(id, userId),
+    findEnabledAll: () => getDb().prepare('SELECT * FROM imap_accounts WHERE enabled=1').all(),
+    insert: (r) => getDb().prepare(`
+        INSERT INTO imap_accounts (id,user_id,name,host,port,username,password_enc,tls,mailbox,poll_interval_sec,enabled,last_uid)
+        VALUES (@id,@user_id,@name,@host,@port,@username,@password_enc,@tls,@mailbox,@poll_interval_sec,@enabled,@last_uid)
+    `).run({
+        ...r,
+        tls: r.tls !== false ? 1 : 0,
+        enabled: r.enabled !== false ? 1 : 0,
+        poll_interval_sec: r.poll_interval_sec ?? 120,
+        last_uid: r.last_uid ?? 0,
+        mailbox: r.mailbox || 'INBOX',
+    }),
+    update: (id, userId, r) => {
+        const sets = []; const vals = { id, user_id: userId };
+        const map = ['name', 'host', 'port', 'username', 'password_enc', 'tls', 'mailbox', 'poll_interval_sec', 'enabled', 'last_uid', 'last_sync_at'];
+        for (const k of map) {
+            if (r[k] !== undefined) {
+                sets.push(`${k}=@${k}`);
+                vals[k] = (k === 'tls' || k === 'enabled') ? (r[k] ? 1 : 0) : r[k];
+            }
+        }
+        if (!sets.length) return;
+        getDb().prepare(`UPDATE imap_accounts SET ${sets.join(',')} WHERE id=@id AND user_id=@user_id`).run(vals);
+    },
+    delete: (id, userId) => getDb().prepare('DELETE FROM imap_accounts WHERE id=? AND user_id=?').run(id, userId).changes,
+};
+
+const ReceivedMailLocal = {
+    insert: (r) => getDb().prepare(`
+        INSERT INTO received_emails_local (id,user_id,imap_account_id,imap_uid,from_addr,subject,body_text,snippet,received_at,local_deleted,has_attachments,attachment_paths)
+        VALUES (@id,@user_id,@imap_account_id,@imap_uid,@from_addr,@subject,@body_text,@snippet,@received_at,0,@has_attachments,@attachment_paths)
+    `).run({
+        ...r,
+        has_attachments: r.has_attachments ? 1 : 0,
+        attachment_paths: typeof r.attachment_paths === 'string' ? r.attachment_paths : JSON.stringify(r.attachment_paths || []),
+    }),
+    findByUser: (userId, { limit = 50, includeDeleted = false } = {}) => {
+        const db = getDb();
+        const del = includeDeleted ? '' : ' AND local_deleted=0';
+        return db.prepare(`SELECT * FROM received_emails_local WHERE user_id=?${del} ORDER BY received_at DESC LIMIT ?`).all(userId, limit);
+    },
+    findByIdForUser: (id, userId) => getDb().prepare('SELECT * FROM received_emails_local WHERE id=? AND user_id=?').get(id, userId),
+    markLocalDeleted: (id, userId) => getDb().prepare(
+        'UPDATE received_emails_local SET local_deleted=1 WHERE id=? AND user_id=?'
+    ).run(id, userId).changes,
+};
+
+const ImapForwardRules = {
+    findByUser: (userId) => getDb().prepare(
+        'SELECT * FROM imap_forward_rules WHERE user_id=? ORDER BY priority DESC, created_at ASC'
+    ).all(userId),
+    findByIdForUser: (id, userId) => getDb().prepare('SELECT * FROM imap_forward_rules WHERE id=? AND user_id=?').get(id, userId),
+    insert: (r) => getDb().prepare(`
+        INSERT INTO imap_forward_rules (id,user_id,imap_account_id,name,enabled,match_all,match_from_regex,match_subject_contains,match_body_contains,channel,dest_telegram_chat_id,dest_sms_to,priority)
+        VALUES (@id,@user_id,@imap_account_id,@name,@enabled,@match_all,@match_from_regex,@match_subject_contains,@match_body_contains,@channel,@dest_telegram_chat_id,@dest_sms_to,@priority)
+    `).run({
+        ...r,
+        enabled: r.enabled !== false ? 1 : 0,
+        match_all: r.match_all ? 1 : 0,
+        priority: r.priority ?? 0,
+        name: r.name || 'Rule',
+    }),
+    update: (id, userId, r) => {
+        const sets = []; const vals = { id, user_id: userId };
+        const map = ['name', 'enabled', 'match_all', 'match_from_regex', 'match_subject_contains', 'match_body_contains', 'channel', 'dest_telegram_chat_id', 'dest_sms_to', 'priority', 'imap_account_id'];
+        for (const k of map) {
+            if (r[k] !== undefined) {
+                sets.push(`${k}=@${k}`);
+                vals[k] = (k === 'enabled' || k === 'match_all') ? (r[k] ? 1 : 0) : r[k];
+            }
+        }
+        if (!sets.length) return;
+        getDb().prepare(`UPDATE imap_forward_rules SET ${sets.join(',')} WHERE id=@id AND user_id=@user_id`).run(vals);
+    },
+    delete: (id, userId) => getDb().prepare('DELETE FROM imap_forward_rules WHERE id=? AND user_id=?').run(id, userId).changes,
+};
+
 // ── Keyword Rules Helpers ──────────────────────────────────────
 const KeywordRules = {
     findAll:     () => getDb().prepare('SELECT * FROM keyword_rules ORDER BY priority DESC, keyword').all(),
@@ -1423,21 +1638,21 @@ const DEFAULT_PLANS = [
         price_monthly: 0, price_yearly: 0, currency: 'USD', purchase_url: null,
         highlight: 0, is_active: 1, is_default: 1, display_order: 0,
         limits: { messages_per_day: 50, messages_per_month: 500, devices: 1, contacts: 100, templates: 3, campaigns: 0, webhooks: 0, scheduled_messages: 0, llm_instances: 0, number_groups: 0, recipient_groups: 0, api_keys: 1 },
-        features: { bulk_send: false, webhooks: false, llm_autoresponder: false, campaigns: false, scheduled_messages: false, analytics_advanced: false, number_groups: false, recipient_groups: false, mms: true, contacts_import: false, qr_pairing: false, api_access: true },
+        features: { bulk_send: false, webhooks: false, llm_autoresponder: false, campaigns: false, scheduled_messages: false, analytics_advanced: false, number_groups: false, recipient_groups: false, mms: true, contacts_import: false, qr_pairing: false, api_access: true, forwarding_rules: false, imap_mail: false },
     },
     {
         id: 'plan_standard', name: 'Standard', badge: 'Popular', description: 'For growing businesses',
         price_monthly: 19, price_yearly: 190, currency: 'USD', purchase_url: null,
         highlight: 1, is_active: 1, is_default: 0, display_order: 1,
         limits: { messages_per_day: 1000, messages_per_month: 20000, devices: 5, contacts: 10000, templates: 50, campaigns: 10, webhooks: 5, scheduled_messages: 100, llm_instances: 2, number_groups: 3, recipient_groups: 10, api_keys: 5 },
-        features: { bulk_send: true, webhooks: true, llm_autoresponder: true, campaigns: true, scheduled_messages: true, analytics_advanced: true, number_groups: true, recipient_groups: true, mms: true, contacts_import: true, qr_pairing: true, api_access: true },
+        features: { bulk_send: true, webhooks: true, llm_autoresponder: true, campaigns: true, scheduled_messages: true, analytics_advanced: true, number_groups: true, recipient_groups: true, mms: true, contacts_import: true, qr_pairing: true, api_access: true, forwarding_rules: true, imap_mail: true },
     },
     {
         id: 'plan_enterprise', name: 'Enterprise', badge: 'Unlimited', description: 'Full power, no limits',
         price_monthly: 99, price_yearly: 990, currency: 'USD', purchase_url: null,
         highlight: 0, is_active: 1, is_default: 0, display_order: 2,
         limits: { messages_per_day: -1, messages_per_month: -1, devices: -1, contacts: -1, templates: -1, campaigns: -1, webhooks: -1, scheduled_messages: -1, llm_instances: -1, number_groups: -1, recipient_groups: -1, api_keys: -1 },
-        features: { bulk_send: true, webhooks: true, llm_autoresponder: true, campaigns: true, scheduled_messages: true, analytics_advanced: true, number_groups: true, recipient_groups: true, mms: true, contacts_import: true, qr_pairing: true, api_access: true },
+        features: { bulk_send: true, webhooks: true, llm_autoresponder: true, campaigns: true, scheduled_messages: true, analytics_advanced: true, number_groups: true, recipient_groups: true, mms: true, contacts_import: true, qr_pairing: true, api_access: true, forwarding_rules: true, imap_mail: true },
     },
 ];
 
@@ -1765,6 +1980,6 @@ module.exports = {
     Settings, NumberGroups, RecipientGroups, PairingTokens,
     Plans, Users, Sessions, PasswordResets, Roles,
     BackupDestinations, BackupJobs, BackupSchedules,
-    AuditLog, KeywordRules, DripSequences,
+    AuditLog, KeywordRules, ForwardingRules, ImapAccounts, ReceivedMailLocal, ImapForwardRules, DripSequences,
     IpSecurity, DiscoveryHints, LoginFailCounters, UnbanChallenges, SmtpSendLog,
 };

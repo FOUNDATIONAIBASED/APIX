@@ -277,6 +277,8 @@ label{font-size:11px;font-family:var(--fm);color:var(--tx2);display:block;margin
       <label id="feat_contacts_import" class="feat-toggle" onclick="toggleFeat(this)"><input type="checkbox" class="feat-cb"> Contacts Import</label>
       <label id="feat_qr_pairing" class="feat-toggle" onclick="toggleFeat(this)"><input type="checkbox" class="feat-cb"> QR Device Pairing</label>
       <label id="feat_api_access" class="feat-toggle" onclick="toggleFeat(this)"><input type="checkbox" class="feat-cb"> API Access</label>
+      <label id="feat_forwarding_rules" class="feat-toggle" onclick="toggleFeat(this)"><input type="checkbox" class="feat-cb"> Forwarding rules</label>
+      <label id="feat_imap_mail" class="feat-toggle" onclick="toggleFeat(this)"><input type="checkbox" class="feat-cb"> Email &amp; IMAP</label>
     </div>
     <style>.feat-toggle{display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:8px;background:var(--s1);cursor:pointer;font-size:13px;color:var(--tx2);transition:.2s;}.feat-toggle:hover{color:var(--tx1);}.feat-toggle input{width:16px;height:16px;accent-color:var(--c1);}</style>
 
@@ -354,6 +356,8 @@ function renderPlans() {
       { k:'mms',                l:'MMS Support' },
       { k:'qr_pairing',         l:'QR Device Pairing' },
       { k:'contacts_import',    l:'Bulk Contacts Import' },
+      { k:'forwarding_rules',   l:'Forwarding rules (Telegram/SMS)' },
+      { k:'imap_mail',          l:'Email & IMAP (SMS↔email)' },
     ].map(f => {
       const has = !!p.features?.[f.k];
       return `<div class="feat-item"><div class="feat-check ${has?'feat-yes':'feat-no'}">${has?'✓':'✕'}</div><span class="feat-text ${has?'':'dimmed'}">${f.l}</span></div>`;
@@ -429,6 +433,8 @@ function renderCompare() {
       { label: 'Webhook count', key: 'l:webhooks' },
       { label: 'LLM Auto-responder', key: 'f:llm_autoresponder' },
       { label: 'Advanced Analytics', key: 'f:analytics_advanced' },
+      { label: 'Inbound forwarding rules', key: 'f:forwarding_rules' },
+      { label: 'Email & IMAP (receive, SMS↔email)', key: 'f:imap_mail' },
     ]},
     { label: 'Templates', rows: [
       { label: 'Templates', key: 'l:templates' },
@@ -533,7 +539,7 @@ function editPlan(id) {
   document.getElementById('lm_scheduled').value = lm.scheduled_messages??0;
   document.getElementById('lm_apikeys').value = lm.api_keys??1;
   const ft = p.features||{};
-  ['bulk_send','webhooks','llm_autoresponder','campaigns','scheduled_messages','analytics_advanced','number_groups','recipient_groups','mms','contacts_import','qr_pairing','api_access'].forEach(k=>{
+  ['bulk_send','webhooks','llm_autoresponder','campaigns','scheduled_messages','analytics_advanced','number_groups','recipient_groups','mms','contacts_import','qr_pairing','api_access','forwarding_rules','imap_mail'].forEach(k=>{
     const el = document.getElementById('feat_'+k);
     if (el) el.querySelector('.feat-cb').checked = !!ft[k];
   });
@@ -544,7 +550,7 @@ function closePlanModal() { document.getElementById('planModal').style.display='
 
 async function savePlan() {
   const editId = document.getElementById('editPlanId').value;
-  const featKeys = ['bulk_send','webhooks','llm_autoresponder','campaigns','scheduled_messages','analytics_advanced','number_groups','recipient_groups','mms','contacts_import','qr_pairing','api_access'];
+  const featKeys = ['bulk_send','webhooks','llm_autoresponder','campaigns','scheduled_messages','analytics_advanced','number_groups','recipient_groups','mms','contacts_import','qr_pairing','api_access','forwarding_rules','imap_mail'];
   const features = {};
   featKeys.forEach(k=>{
     const el = document.getElementById('feat_'+k);

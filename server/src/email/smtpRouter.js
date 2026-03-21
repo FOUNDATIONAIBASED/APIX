@@ -142,7 +142,7 @@ function buildTryOrder(profiles) {
  * @param {object} opts - { to, subject, text, html, skipQuota?: boolean }
  */
 async function sendTransactional(opts) {
-    const { to, subject, text, html, skipQuota } = opts;
+    const { to, subject, text, html, skipQuota, attachments } = opts;
     const profiles = smtpConfig.getEffectiveProfiles();
     if (!profiles.length) {
         console.info(`[MAIL] No SMTP configured — would send to ${to}: ${subject}`);
@@ -153,7 +153,7 @@ async function sendTransactional(opts) {
     if (skipQuota) {
         const p = profiles.find(x => x.enabled && x.host) || profiles[0];
         if (!p?.host) return false;
-        await smtpTransport.sendMail(p, { to, subject, text, html });
+        await smtpTransport.sendMail(p, { to, subject, text, html, attachments });
         return true;
     }
 
@@ -168,7 +168,7 @@ async function sendTransactional(opts) {
             continue;
         }
         try {
-            await smtpTransport.sendMail(p, { to, subject, text, html });
+            await smtpTransport.sendMail(p, { to, subject, text, html, attachments });
             SmtpSendLog.record(p.id);
             if (advanceRoundRobin) {
                 let idx = parseInt(Settings.get('smtp_rr_index', '0'), 10) || 0;

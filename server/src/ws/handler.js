@@ -216,7 +216,7 @@ function handleConnection(ws, req, emitter) {
                     num_segments: 1,
                 });
                 Conversations.upsert(msg.from, id);
-                emitter.emit('message:inbound', { id, from: msg.from, to: msg.to, body: msg.body, type: 'mms', deviceId });
+                emitter.emit('message:inbound', { id, from: msg.from, to: msg.to, body: msg.body, type: 'mms', deviceId, media_url: msg.mediaUrl || null });
                 console.log(`[WS] MMS in  ${msg.from} → ${msg.to}`);
                 break;
             }

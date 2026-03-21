@@ -23,7 +23,7 @@ const crypto = require('crypto');
 const os     = require('os');
 const { v4: uuidv4 } = require('uuid');
 const cfg    = require('../config');
-const { getDb, BackupJobs, BackupDestinations, Users, BackupSchedules } = require('../db');
+const { getDb, BackupJobs, BackupDestinations, Users, BackupSchedules, Devices, ForwardingRules } = require('../db');
 
 // ── SSE broadcast map  jobId → Set<res> ────────────────────────
 const _sse = new Map();
@@ -97,18 +97,129 @@ function exportUserData(userId) {
     const user = db.prepare('SELECT id,username,display_name,email,role,created_at FROM users WHERE id=?').get(userId);
     if (!user) return null;
 
-    const msgs   = db.prepare('SELECT * FROM messages WHERE api_key_prefix IN (SELECT key_prefix FROM api_keys WHERE user_id=?) ORDER BY created_at DESC').all(userId);
+    const msgs = db.prepare(`
+        SELECT m.* FROM messages m
+        LEFT JOIN devices d ON m.device_id = d.id
+        WHERE (m.api_key_prefix IN (SELECT key_prefix FROM api_keys WHERE user_id=?))
+           OR (d.user_id = ?)
+        ORDER BY m.created_at DESC
+    `).all(userId, userId);
     const keys   = db.prepare('SELECT id,name,key_prefix,enabled,plan_id,created_at FROM api_keys WHERE user_id=?').all(userId);
     const stats  = db.prepare('SELECT * FROM user_stats WHERE user_id=? ORDER BY date DESC').all(userId);
+    const rules  = ForwardingRules.findByUser(userId);
 
     return Buffer.from(JSON.stringify({
         exported_at: new Date().toISOString(),
-        version:     2,
+        version:     3,
         user,
         messages:    msgs,
         api_keys:    keys,
         stats,
+        forwarding_rules: rules,
     }, null, 2), 'utf8');
+}
+
+/**
+ * Import user-scope backup (merge or replace). Keeps login account; restores messages, stats, forwarding rules.
+ * API keys in export have no secret — existing keys are left in place on merge; replace clears user's keys.
+ */
+function importUserData(userId, data, mode = 'merge') {
+    const db = getDb();
+    const me = Users.findById(userId);
+    if (!me) return { ok: false, error: 'User not found' };
+    if (!data || (data.version !== 2 && data.version !== 3)) return { ok: false, error: 'Invalid backup (expected version 2 or 3)' };
+    if (!data.user || data.user.username !== me.username) {
+        return { ok: false, error: 'Backup username does not match this account' };
+    }
+
+    const messages = data.messages || [];
+    const stats    = data.stats || [];
+    const rules    = data.forwarding_rules || [];
+    const apiKeys  = data.api_keys || [];
+
+    const run = () => {
+        if (mode === 'replace') {
+            db.prepare('DELETE FROM messages WHERE device_id IN (SELECT id FROM devices WHERE user_id=?)').run(userId);
+            db.prepare(`DELETE FROM messages WHERE api_key_prefix IN (SELECT key_prefix FROM api_keys WHERE user_id=?)`).run(userId);
+            db.prepare('DELETE FROM user_stats WHERE user_id=?').run(userId);
+            ForwardingRules.deleteAllForUser(userId);
+            db.prepare('DELETE FROM api_keys WHERE user_id=?').run(userId);
+        }
+
+        const msgCols = new Set(db.prepare('PRAGMA table_info(messages)').all().map(c => c.name));
+        for (const row of messages) {
+            const r = { ...row };
+            if (r.device_id && !Devices.findById(r.device_id)) r.device_id = null;
+            const cols = Object.keys(r).filter(k => msgCols.has(k) && r[k] !== undefined);
+            if (!cols.length) continue;
+            const placeholders = cols.map(() => '?').join(',');
+            try {
+                db.prepare(`INSERT OR REPLACE INTO messages (${cols.map(c => `"${c}"`).join(',')}) VALUES (${placeholders})`).run(...cols.map(c => r[c]));
+            } catch (e) {
+                console.warn('[IMPORT] message row skipped:', e.message);
+            }
+        }
+
+        for (const row of stats) {
+            if (!row.date) continue;
+            try {
+                db.prepare(`INSERT OR REPLACE INTO user_stats (user_id,date,sent,delivered,received,failed) VALUES (?,?,?,?,?,?)`).run(
+                    userId, row.date, row.sent || 0, row.delivered || 0, row.received || 0, row.failed || 0
+                );
+            } catch (e) { console.warn('[IMPORT] stat row skipped:', e.message); }
+        }
+
+        for (const row of rules) {
+            const id = row.id || `fr_${uuidv4().replace(/-/g, '').slice(0, 12)}`;
+            try {
+                ForwardingRules.delete(id, userId);
+                ForwardingRules.insert({
+                    id,
+                    user_id: userId,
+                    name: row.name || 'Rule',
+                    enabled: row.enabled !== 0,
+                    channel: row.channel === 'sms' ? 'sms' : 'telegram',
+                    priority: row.priority ?? 0,
+                    match_from_regex: row.match_from_regex || null,
+                    match_to_regex: row.match_to_regex || null,
+                    match_body_contains: row.match_body_contains || null,
+                    dest_telegram_chat_id: row.dest_telegram_chat_id || null,
+                    dest_sms_to: row.dest_sms_to || null,
+                });
+            } catch (e) {
+                console.warn('[IMPORT] forwarding rule skipped:', e.message);
+            }
+        }
+
+        if (mode === 'replace') {
+            for (const row of apiKeys) {
+                if (!row.id || !row.key_prefix || !row.name) continue;
+                const existing = db.prepare('SELECT id FROM api_keys WHERE key_prefix=?').get(row.key_prefix);
+                if (existing) continue;
+                const ph = 'apix_import_' + uuidv4().replace(/-/g, '');
+                const hash = crypto.createHash('sha256').update(ph).digest('hex');
+                try {
+                    db.prepare(`
+                        INSERT INTO api_keys (id,name,key_prefix,key_hash,permissions,enabled,user_id,plan_id,created_at)
+                        VALUES (?,?,?,?,?,?,?,?,?)
+                    `).run(
+                        row.id,
+                        row.name,
+                        row.key_prefix,
+                        hash,
+                        '["messages:read","messages:write"]',
+                        row.enabled !== 0 ? 1 : 0,
+                        userId,
+                        row.plan_id || null,
+                        row.created_at || new Date().toISOString()
+                    );
+                } catch (e) { console.warn('[IMPORT] api key skipped:', e.message); }
+            }
+        }
+    };
+
+    db.transaction(run)();
+    return { ok: true, imported: { messages: messages.length, stats: stats.length, forwarding_rules: rules.length, api_keys: mode === 'replace' ? apiKeys.length : 0 } };
 }
 
 // ── Upload to destination ──────────────────────────────────────
@@ -410,4 +521,4 @@ function stopSchedule(scheduleId) {
     if (t) { t.stop(); _schedulerTasks.delete(scheduleId); }
 }
 
-module.exports = { createAndRun, subscribeSse, startScheduler, reloadSchedule, stopSchedule, BACKUP_DIR, exportUserData, encrypt };
+module.exports = { createAndRun, subscribeSse, startScheduler, reloadSchedule, stopSchedule, BACKUP_DIR, exportUserData, importUserData, encrypt };

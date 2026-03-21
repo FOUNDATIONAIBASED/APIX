@@ -55,8 +55,13 @@ See **[`.env.example`](./.env.example)** for every variable. Highlights:
 | `USE_SSL` | `true` behind HTTPS reverse proxy (cookies / HSTS behavior) |
 | `DB_PATH` | SQLite file path |
 | `FACTORY_RESET_NO_RESTART` | `true` = do not spawn a replacement process after factory reset (use with **systemd** `Restart=always` / **pm2**) |
+
+**Security overview:** [`SECURITY.md`](./SECURITY.md) (API test page, factory reset, pairing, production tips).
 | `SMTP_*` | Legacy single SMTP when **no** DB profiles exist |
 | `SMTP_MAX_PROFILES` | Cap for UI/API stored profiles (default **25**, max **100**) |
+| `EMAIL_PRESET` | Transactional HTML template: **`dark`** (default) or **`light`** — matches management UI palette |
+| `IMAP_SECRET_KEY` | Optional 32+ char secret for encrypting stored IMAP passwords (defaults to deriving from `JWT_SECRET`) |
+| `EMAIL_BRAND_COLOR` | Accent color for buttons / logo in templates |
 
 ---
 

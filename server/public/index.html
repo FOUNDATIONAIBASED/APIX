@@ -207,6 +207,12 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;
   margin-bottom:-1px;font-weight:500;transition:all .15s;}
 .tab:hover{color:var(--tx2);}.tab.on{color:var(--c1);border-bottom-color:var(--c1);}
 
+/* Automation setup panels (Mail / Telegram / SMS tabs) */
+.panel.setup-accent{border-left:3px solid var(--c1);}
+.panel.setup-accent.ac-mail{border-left-color:var(--c1);}
+.panel.setup-accent.ac-tg{border-left-color:#2AABEE;}
+.panel.setup-accent.ac-sms{border-left-color:var(--c4);}
+
 /* ── CAMPAIGN CARD ── */
 .cc{background:var(--bg3);border:1px solid var(--b1);border-radius:12px;overflow:hidden;transition:border-color .2s;margin-bottom:10px;}
 .cc:hover{border-color:var(--b2);}
@@ -413,6 +419,18 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
       <span class="sn-badge green" id="badgeDevices">0</span>
     </div>
     <div class="sn-group">Automation</div>
+    <div class="sn-item" onclick="goView('mail',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+      Mail
+    </div>
+    <div class="sn-item" onclick="goView('telegram',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+      Telegram
+    </div>
+    <div class="sn-item" onclick="goView('sms',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.36 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+      SMS
+    </div>
     <div class="sn-item" onclick="goView('webhooks',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
       Webhooks
@@ -623,6 +641,17 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
           Pair New Device via QR
         </button>
       </div>
+
+      <div class="panel" style="margin-bottom:14px;">
+        <div class="ph">
+          <div><div class="ph-t">Server &amp; manual connection</div><div class="ph-s">WebSocket URLs, mDNS, and how to enter token by hand in the Agent app</div></div>
+          <button type="button" class="btn g sm" onclick="loadServerConnectionInfo()">Refresh</button>
+        </div>
+        <div class="pb" id="manualConnectionBody" style="font-size:12px;color:var(--tx2);line-height:1.65;">
+          <div style="color:var(--tx3);font-family:var(--fm);font-size:11px;">Click <strong>Refresh</strong> to load LAN WebSocket URLs and pairing instructions.</div>
+        </div>
+      </div>
+
       <!-- QR pairing card — hidden by default -->
       <div id="qrPairCard" style="display:none;background:var(--s1);border:1px solid var(--b1);border-radius:12px;padding:20px;margin-bottom:14px;">
         <div style="display:flex;align-items:flex-start;gap:24px;flex-wrap:wrap;">
@@ -634,6 +663,16 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
             <div style="font-size:10px;color:var(--tx3);font-family:var(--fm);">⏱ Expires in <span id="qrExpiry">10:00</span> · <button class="btn g xs" onclick="showPairQR()">Refresh</button></div>
             <div style="margin-top:10px;font-size:11px;color:var(--tx3);">Connection URLs:</div>
             <div id="qrUrls" style="font-family:var(--fm);font-size:10px;color:var(--c3);margin-top:4px;"></div>
+            <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--b1);">
+              <div style="font-size:11px;font-weight:600;color:var(--tx);margin-bottom:6px;">Manual entry (same data as QR)</div>
+              <div style="font-size:11px;color:var(--tx3);margin-bottom:8px;">In the app, use manual setup if you cannot scan: enter a <strong>WebSocket URL</strong> your phone can reach, then the <strong>pairing token</strong> below (expires with timer).</div>
+              <div style="font-size:10px;color:var(--tx3);margin-bottom:4px;font-family:var(--fm);text-transform:uppercase;">Pairing token</div>
+              <div style="display:flex;gap:8px;align-items:stretch;flex-wrap:wrap;">
+                <code id="qrPairToken" style="flex:1;min-width:200px;font-size:12px;padding:10px 12px;background:var(--bg3);border-radius:8px;border:1px solid var(--b1);word-break:break-all;color:var(--c3);">—</code>
+                <button type="button" class="btn g sm" onclick="copyPairToken()">Copy token</button>
+                <button type="button" class="btn g sm" onclick="copyPairJson()">Copy QR JSON</button>
+              </div>
+            </div>
           </div>
           <div style="flex-shrink:0;">
             <div id="qrCanvas" style="background:#fff;padding:12px;border-radius:10px;display:inline-block;"></div>
@@ -646,11 +685,12 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
           <thead>
             <tr>
               <th>Device</th><th>Status</th><th>SIM Numbers</th>
+              <th>Owner</th>
               <th>Battery</th><th>Signal</th><th>Sent Today</th><th>Last Seen</th><th>Actions</th>
             </tr>
           </thead>
           <tbody id="devicesBody">
-            <tr><td colspan="8" style="text-align:center;color:var(--tx3);font-size:12px;padding:30px;">Loading…</td></tr>
+            <tr><td colspan="9" style="text-align:center;color:var(--tx3);font-size:12px;padding:30px;">Loading…</td></tr>
           </tbody>
         </table>
       </div>
@@ -1053,6 +1093,150 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
       <div id="webhooksList" style="display:flex;flex-direction:column;gap:10px;"></div>
     </div>
 
+    <!-- ── MAIL (plan: imap_mail) ── -->
+    <div class="view" id="view-mail">
+      <div class="sh"><div><div class="sh-t">Mail</div><div class="sh-s">IMAP inboxes, local index, and SMS → email triggers. Configure Telegram/SMS forwarding rules in the <strong>Telegram</strong> and <strong>SMS</strong> tabs.</div></div></div>
+
+      <div class="panel setup-accent ac-mail" style="margin-bottom:14px;">
+        <div class="ph"><div class="ph-t">SMS / MMS → email</div></div>
+        <div class="pb" style="font-size:12px;color:var(--tx2);line-height:1.65;">
+          <p>From a phone whose device is <strong>assigned to your account</strong> (Devices → Owner), include one of these in the message body:</p>
+          <pre style="background:var(--bg3);padding:12px;border-radius:8px;font-family:var(--fm);font-size:11px;margin:10px 0;white-space:pre-wrap;">$#email: you@example.com
+message: Your text here…</pre>
+          <p>Or: <code style="font-family:var(--fm);">email: you@example.com</code> on its own line, then the rest of the message. <strong>MMS</strong> images are attached when possible (requires SMTP). Uses plan feature <strong>Email &amp; IMAP</strong>.</p>
+        </div>
+      </div>
+
+      <div class="panel setup-accent ac-mail" style="margin-bottom:14px;">
+        <div class="ph"><div class="ph-t">Add IMAP account</div></div>
+        <div class="pb">
+          <div class="g g2" style="gap:10px;">
+            <div><label class="fl">Label</label><input class="fi" id="imapName" placeholder="Work Gmail"></div>
+            <div><label class="fl">Host</label><input class="fi" id="imapHost" placeholder="imap.gmail.com"></div>
+            <div><label class="fl">Port</label><input class="fi" id="imapPort" type="number" value="993"></div>
+          </div>
+          <div class="g g2" style="gap:10px;margin-top:10px;">
+            <div><label class="fl">Username</label><input class="fi" id="imapUser" placeholder="user@domain.com"></div>
+            <div><label class="fl">Password</label><input class="fi" id="imapPass" type="password" placeholder="App password"></div>
+            <div><label class="fl">Mailbox</label><input class="fi" id="imapBox" value="INBOX"></div>
+          </div>
+          <div class="g g2" style="gap:10px;margin-top:10px;">
+            <div><label class="fl">Poll interval (sec)</label><input class="fi" id="imapPoll" type="number" value="120"></div>
+            <div style="display:flex;align-items:flex-end;gap:8px;">
+              <label class="fl" style="margin:0;"><input type="checkbox" id="imapTls" checked> TLS</label>
+            </div>
+          </div>
+          <button class="btn p sm" onclick="saveImapAccount()" style="margin-top:10px;">Save account</button>
+        </div>
+      </div>
+
+      <div class="panel setup-accent ac-mail" style="margin-bottom:14px;">
+        <div class="ph"><div class="ph-t">IMAP accounts</div><button class="btn sm" onclick="loadImapAccounts()">Refresh</button></div>
+        <div class="pb" style="overflow-x:auto;"><table class="dt"><thead><tr><th>Name</th><th>Host</th><th>Last sync</th><th>UID</th><th></th></tr></thead><tbody id="imapAccBody"></tbody></table></div>
+      </div>
+
+      <div class="panel setup-accent ac-mail">
+        <div class="ph"><div class="ph-t">Received mail (local index)</div><span class="ph-s">Delete only removes from this gateway — not from your IMAP server</span><button class="btn sm" onclick="loadImapLocal()">Refresh</button></div>
+        <div class="pb" style="overflow-x:auto;"><table class="dt"><thead><tr><th>From</th><th>Subject</th><th>Received</th><th></th></tr></thead><tbody id="imapLocalBody"></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- ── TELEGRAM (plan: forwarding_rules and/or imap_mail) ── -->
+    <div class="view" id="view-telegram">
+      <div class="sh"><div><div class="sh-t">Telegram</div><div class="sh-s">System bot, inbound SMS → Telegram, and IMAP → Telegram. Requires device ownership where applicable.</div></div></div>
+
+      <div class="panel setup-accent ac-tg" style="margin-bottom:14px;">
+        <div class="ph"><div class="ph-t">System Telegram bot</div></div>
+        <div class="pb" style="font-size:12px;color:var(--tx2);line-height:1.65;">
+          <p>Set the <strong>bot token</strong> and default chat in Settings. Per-rule chat IDs below override the default.</p>
+          <button type="button" class="btn p sm" onclick="goView('settings', _settingsNavEl())">Open Settings →</button>
+        </div>
+      </div>
+
+      <div class="panel setup-accent ac-tg" style="margin-bottom:14px;">
+        <div class="ph"><div class="ph-t">Inbound SMS → Telegram</div><span class="ph-s">Match rules on inbound SMS/MMS</span></div>
+        <div class="pb">
+          <div class="g g2" style="gap:10px;">
+            <div><label class="fl">Name</label><input class="fi" id="tgFrName" placeholder="e.g. Alerts to Telegram"></div>
+            <div><label class="fl">Priority (higher first)</label><input class="fi" id="tgFrPriority" type="number" value="0"></div>
+          </div>
+          <div class="g g2" style="gap:10px;margin-top:10px;">
+            <div><label class="fl">Match FROM (regex, optional)</label><input class="fi" id="tgFrFrom" placeholder=".*"></div>
+            <div><label class="fl">Match TO (regex, optional)</label><input class="fi" id="tgFrTo" placeholder=""></div>
+          </div>
+          <div style="margin-top:10px;"><label class="fl">Body contains (optional)</label><input class="fi" id="tgFrBody" placeholder="keyword"></div>
+          <div style="margin-top:10px;"><label class="fl">Telegram chat ID</label><input class="fi" id="tgFrChat" placeholder="-1001234567890"></div>
+          <button type="button" class="btn p sm" onclick="saveForwardingRuleFor('telegram')" style="margin-top:10px;">Save rule</button>
+          <div class="ph" style="margin-top:16px;padding-top:0;border:none;"><div class="ph-t">Active rules (Telegram)</div><button type="button" class="btn sm" onclick="loadForwardingRulesFor('telegram','forwardingBodyTelegram')">Refresh</button></div>
+          <div style="overflow-x:auto;"><table class="dt"><thead><tr><th>Name</th><th>Priority</th><th>Destination</th><th>Match</th><th></th></tr></thead><tbody id="forwardingBodyTelegram"></tbody></table></div>
+        </div>
+      </div>
+
+      <div class="panel setup-accent ac-tg">
+        <div class="ph"><div class="ph-t">IMAP → Telegram</div><span class="ph-s">Forward matched mail to Telegram</span></div>
+        <div class="pb">
+          <div class="g g2" style="gap:10px;">
+            <div><label class="fl">Name</label><input class="fi" id="tgImapName" placeholder="Forward bank alerts"></div>
+            <div><label class="fl">IMAP account (empty = all)</label><input class="fi" id="tgImapAccId" placeholder="imap_…"></div>
+          </div>
+          <div style="margin-top:8px;"><label class="fl"><input type="checkbox" id="tgImapAll"> Match <strong>all</strong> incoming mail (ignore filters below)</label></div>
+          <div class="g g2" style="gap:10px;margin-top:10px;">
+            <div><label class="fl">From (regex)</label><input class="fi" id="tgImapFrom" placeholder=".*@bank\.com"></div>
+            <div><label class="fl">Subject contains</label><input class="fi" id="tgImapSub"></div>
+            <div><label class="fl">Body contains</label><input class="fi" id="tgImapBody"></div>
+          </div>
+          <div style="margin-top:10px;"><label class="fl">Telegram chat ID</label><input class="fi" id="tgImapChat"></div>
+          <button type="button" class="btn p sm" onclick="saveImapRuleFor('telegram')" style="margin-top:10px;">Save rule</button>
+          <div class="ph" style="margin-top:16px;padding-top:0;border:none;"><div class="ph-t">IMAP rules (Telegram)</div><button type="button" class="btn sm" onclick="loadImapRulesFor('telegram','imapRuleBodyTg')">Refresh</button></div>
+          <div style="overflow-x:auto;margin-top:8px;"><table class="dt"><thead><tr><th>Name</th><th>Match</th><th>Dest</th><th></th></tr></thead><tbody id="imapRuleBodyTg"></tbody></table></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SMS (plan: forwarding_rules and/or imap_mail) ── -->
+    <div class="view" id="view-sms">
+      <div class="sh"><div><div class="sh-t">SMS automation</div><div class="sh-s">Inbound SMS → outbound SMS and IMAP → SMS. Requires device ownership where applicable.</div></div></div>
+
+      <div class="panel setup-accent ac-sms" style="margin-bottom:14px;">
+        <div class="ph"><div class="ph-t">Inbound SMS → SMS (forward)</div><span class="ph-s">Match rules on inbound SMS/MMS</span></div>
+        <div class="pb">
+          <div class="g g2" style="gap:10px;">
+            <div><label class="fl">Name</label><input class="fi" id="smsFrName" placeholder="e.g. Relay to support"></div>
+            <div><label class="fl">Priority (higher first)</label><input class="fi" id="smsFrPriority" type="number" value="0"></div>
+          </div>
+          <div class="g g2" style="gap:10px;margin-top:10px;">
+            <div><label class="fl">Match FROM (regex, optional)</label><input class="fi" id="smsFrFrom" placeholder=".*"></div>
+            <div><label class="fl">Match TO (regex, optional)</label><input class="fi" id="smsFrTo" placeholder=""></div>
+          </div>
+          <div style="margin-top:10px;"><label class="fl">Body contains (optional)</label><input class="fi" id="smsFrBody" placeholder="keyword"></div>
+          <div style="margin-top:10px;"><label class="fl">Forward SMS to number</label><input class="fi" id="smsFrSmsTo" placeholder="+15551234567"></div>
+          <button type="button" class="btn p sm" onclick="saveForwardingRuleFor('sms')" style="margin-top:10px;">Save rule</button>
+          <div class="ph" style="margin-top:16px;padding-top:0;border:none;"><div class="ph-t">Active rules (SMS)</div><button type="button" class="btn sm" onclick="loadForwardingRulesFor('sms','forwardingBodySms')">Refresh</button></div>
+          <div style="overflow-x:auto;"><table class="dt"><thead><tr><th>Name</th><th>Priority</th><th>Destination</th><th>Match</th><th></th></tr></thead><tbody id="forwardingBodySms"></tbody></table></div>
+        </div>
+      </div>
+
+      <div class="panel setup-accent ac-sms">
+        <div class="ph"><div class="ph-t">IMAP → SMS</div><span class="ph-s">Forward matched mail to a phone number</span></div>
+        <div class="pb">
+          <div class="g g2" style="gap:10px;">
+            <div><label class="fl">Name</label><input class="fi" id="smsImapName" placeholder="Forward receipts"></div>
+            <div><label class="fl">IMAP account (empty = all)</label><input class="fi" id="smsImapAccId" placeholder="imap_…"></div>
+          </div>
+          <div style="margin-top:8px;"><label class="fl"><input type="checkbox" id="smsImapAll"> Match <strong>all</strong> incoming mail (ignore filters below)</label></div>
+          <div class="g g2" style="gap:10px;margin-top:10px;">
+            <div><label class="fl">From (regex)</label><input class="fi" id="smsImapFrom" placeholder=".*@receipts\.com"></div>
+            <div><label class="fl">Subject contains</label><input class="fi" id="smsImapSub"></div>
+            <div><label class="fl">Body contains</label><input class="fi" id="smsImapBody"></div>
+          </div>
+          <div style="margin-top:10px;"><label class="fl">SMS to number</label><input class="fi" id="smsImapSmsTo" placeholder="+15551234567"></div>
+          <button type="button" class="btn p sm" onclick="saveImapRuleFor('sms')" style="margin-top:10px;">Save rule</button>
+          <div class="ph" style="margin-top:16px;padding-top:0;border:none;"><div class="ph-t">IMAP rules (SMS)</div><button type="button" class="btn sm" onclick="loadImapRulesFor('sms','imapRuleBodySms')">Refresh</button></div>
+          <div style="overflow-x:auto;margin-top:8px;"><table class="dt"><thead><tr><th>Name</th><th>Match</th><th>Dest</th><th></th></tr></thead><tbody id="imapRuleBodySms"></tbody></table></div>
+        </div>
+      </div>
+    </div>
+
     <!-- ── LLM / AI ── -->
     <div class="view" id="view-llm">
       <div class="sh"><div><div class="sh-t">AI / LLM Auto-reply</div><div class="sh-s">Ollama · LM Studio · OpenRouter · Groq · Together AI · any OpenAI-compatible endpoint</div></div></div>
@@ -1221,6 +1405,23 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
             </div>
             <div id="myJobsList" style="margin-top:14px;min-height:60px;overflow:auto;max-height:300px;"></div>
             <p style="font-size:11px;color:var(--tx3);margin-top:10px;">Completed exports can be downloaded below. Full restore is in <strong>Settings → Backup & Restore</strong> (admin).</p>
+            <p style="font-size:11px;color:var(--tx3);margin-top:8px;"><a class="btn g xs" href="/api/v1/backup/my-data-json" download>Download JSON export</a> (same data as encrypted backup — use for import below)</p>
+          </div>
+        </div>
+
+        <!-- Import backup -->
+        <div class="panel" style="margin-top:14px;">
+          <div class="ph"><div class="ph-t">📥 Import my data</div><span class="ph-s">Restore from a JSON backup (merge or wipe + restore)</span></div>
+          <div class="pb">
+            <p style="font-size:12px;color:var(--tx2);margin-bottom:10px;"><strong>Merge</strong> upserts messages and rules. <strong>Replace</strong> deletes your messages, stats, forwarding rules, and API keys on this server, then restores from the file (login unchanged).</p>
+            <div class="g g2" style="gap:10px;margin-bottom:10px;">
+              <div><label class="fl">Mode</label>
+                <select class="fsel" id="importDataMode"><option value="merge">Merge</option><option value="replace">Replace (wipe my data first)</option></select>
+              </div>
+              <div><label class="fl">JSON file</label><input class="fi" type="file" id="importDataFile" accept=".json,application/json"></div>
+            </div>
+            <button class="btn p sm" onclick="myDataImport()">Import from file</button>
+            <p style="font-size:10px;color:var(--tx3);margin-top:10px;">Backup <code style="font-family:var(--fm);">user.username</code> must match this account. Get JSON via <strong>Download JSON export</strong> or decrypt a <code>.zip</code> export from My Jobs.</p>
           </div>
         </div>
       </div>
@@ -1603,10 +1804,13 @@ function goView(id, el){
   document.getElementById('view-'+id)?.classList.add('on');
   document.querySelectorAll('.sn-item').forEach(i=>i.classList.remove('on'));
   if(el)el.classList.add('on');
+  removeGate('mail');
+  removeGate('telegram');
+  removeGate('sms');
   const labels={dashboard:'Dashboard',campaigns:'Campaigns',conversations:'Conversations',
     numbers:'Number Pool',devices:'Devices',settings:'Settings',
     contacts:'Contacts',optouts:'Opt-outs',templates:'Templates',
-    webhooks:'Webhooks',llm:'AI / LLM',analytics:'Analytics',
+    mail:'Mail',telegram:'Telegram',sms:'SMS',webhooks:'Webhooks',llm:'AI / LLM',analytics:'Analytics',
     apikeys:'API Keys',scheduled:'Scheduled Messages',
     numgroups:'Number Groups',rcptgroups:'Recipient Groups',
     myaccount:'My Account',accounts:'Accounts',roles:'Roles & Permissions',
@@ -1645,6 +1849,13 @@ function goView(id, el){
   if(id==='keyword-rules')  loadKwr();
   if(id==='livefeed')       initLiveFeed();
   if(id==='drip')           loadDrip();
+  if(id==='mail')          { loadMailHub(); gateFeature('mail','imap_mail'); }
+  if(id==='telegram')      { loadTelegramHub(); gateFeatureAny('telegram',['forwarding_rules','imap_mail']); }
+  if(id==='sms')           { loadSmsHub(); gateFeatureAny('sms',['forwarding_rules','imap_mail']); }
+}
+
+function _settingsNavEl() {
+  return document.querySelector('.sn-item[onclick*="settings"]');
 }
 
 // ════ LOAD DATA ════
@@ -1895,10 +2106,11 @@ function renderNumberPool(){
 
 // ════ DEVICES ════
 function renderDevices(){
+  loadServerConnectionInfo();
   const el=document.getElementById('devicesBody');
   document.getElementById('devicesSub').textContent=`${allDevices.length} registered · ${allDevices.filter(d=>d.connected).length} online`;
   if(!allDevices.length){
-    el.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--tx3);font-size:12px;padding:40px;">No devices. Install the ApiX Agent app on Android and connect it.</td></tr>';
+    el.innerHTML='<tr><td colspan="9" style="text-align:center;color:var(--tx3);font-size:12px;padding:40px;">No devices. Install the ApiX Agent app on Android and connect it.</td></tr>';
     return;
   }
   el.innerHTML=allDevices.map(d=>{
@@ -1913,6 +2125,12 @@ function renderDevices(){
         <div style="font-size:9px;color:var(--tx3);font-family:var(--fm);">${d.id}</div></td>
       <td><span class="chip ${statusClass}">${statusLabel}</span></td>
       <td style="font-family:var(--fm);font-size:11px;color:var(--c3);">${nums}</td>
+      <td style="font-size:11px;max-width:160px;">
+        ${_currentUser?.role==='admin'
+          ? `<input class="fi" id="owner_${d.id}" style="font-size:10px;padding:4px 6px;width:100%;" value="${d.user_id||''}" placeholder="User id (accounts)">
+             <button class="btn xs" style="margin-top:4px;" onclick="setDeviceOwner('${d.id}')">Set owner</button>`
+          : `<span style="font-family:var(--fm);color:var(--tx3);" title="Ask admin to assign device to your account">${d.user_id?(d.user_id.slice(0,10)+'…'):'—'}</span>`}
+      </td>
       <td style="font-family:var(--fm);font-size:12px;color:${battColor(bat)};">${bat!=null?bat+'%':'—'}</td>
       <td style="font-size:11px;color:var(--tx3);">${Array.isArray(sig)?sig[0]+'dBm':sig||'—'}</td>
       <td style="font-family:var(--fm);font-size:12px;color:var(--c1);">${d.sent_today||0}</td>
@@ -1941,6 +2159,14 @@ async function deleteDevice(id){
   if(!confirm('Remove this device?'))return;
   const res=await fetch(`/api/v1/devices/${id}`,{method:'DELETE'});
   if(res.ok){await loadAll();toast('Device removed','amber');}
+}
+async function setDeviceOwner(deviceId){
+  const inp=document.getElementById('owner_'+deviceId);
+  const user_id=(inp?.value||'').trim()||null;
+  const res=await fetch(`/api/v1/devices/${deviceId}`,{method:'PATCH',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({user_id})});
+  const d=await res.json().catch(()=>({}));
+  if(res.ok){toast('Owner updated');await loadAll();}
+  else toast(d.error||'Failed','red');
 }
 
 // ════ SETTINGS ════
@@ -2732,8 +2958,56 @@ function connectSSE(){
   es.onerror=()=>setTimeout(connectSSE,5000);
 }
 
+// ════ SERVER / MANUAL CONNECTION (devices view) ════
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+async function loadServerConnectionInfo() {
+  const el = document.getElementById('manualConnectionBody');
+  if (!el) return;
+  el.innerHTML = '<div style="color:var(--tx3);font-family:var(--fm);font-size:11px;">Loading…</div>';
+  const r = await fetch('/api/v1/devices/server-info', { credentials: 'include' }).catch(() => null);
+  if (!r || !r.ok) {
+    el.innerHTML = '<div style="color:#fca5a5;font-size:12px;">Could not load server info (need <strong>devices:view</strong>). Sign in and try again.</div>';
+    return;
+  }
+  const d = await r.json();
+  const wsList = (d.ws_urls || []).map((u) =>
+    `<li style="margin:4px 0;font-family:var(--fm);font-size:11px;word-break:break-all;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+      <code style="flex:1;min-width:200px;color:var(--c3);">${escapeHtml(u)}</code>
+      <button type="button" class="btn g xs" data-copy="${encodeURIComponent(u)}" onclick="copyConnLine(this)">Copy</button>
+    </li>`).join('');
+  const mdnsOn = d.mdns_enabled !== false;
+  el.innerHTML = `
+    <div style="margin-bottom:12px;">
+      <strong style="color:var(--tx);">${escapeHtml(d.mdns_name || 'ApiX')}</strong>
+      · HTTP port <code>${escapeHtml(String(d.port))}</code>
+      · mDNS service <code>${escapeHtml(d.mdns_service || '_apix._tcp.local')}</code>
+      <span style="opacity:.85;">(${mdnsOn ? 'enabled — discover on LAN' : 'disabled in .env'})</span>
+    </div>
+    <div style="font-weight:600;color:var(--tx);margin-bottom:6px;font-size:11px;">WebSocket URLs <span style="font-weight:400;opacity:.85;">(Agent connects to <code>/ws</code>)</span></div>
+    <ul style="margin:0 0 12px;padding-left:18px;list-style:disc;">${wsList || '<li>No LAN IPs detected (using localhost only)</li>'}</ul>
+    <div style="font-size:11px;color:var(--tx3);margin-bottom:10px;">Management UI (this browser): <code style="color:var(--c3);">${escapeHtml(d.management_url || '')}</code></div>
+    <div style="padding:12px;background:rgba(59,130,246,.06);border:1px solid var(--b1);border-radius:10px;font-size:11px;">
+      <strong style="color:var(--tx);">Manual connection</strong> requires: (1) a <strong>WebSocket URL</strong> the phone can route to — usually <code>ws://&lt;server-LAN-IP&gt;:${escapeHtml(String(d.port))}/ws</code> on the same Wi‑Fi;
+      (2) a <strong>pairing token</strong> — click <em>Pair New Device via QR</em> (admins/mods); the dialog shows the token and <em>Copy</em> buttons.
+      Verify endpoint (app): <code style="font-size:10px;word-break:break-all;">${escapeHtml(d.manual_pairing?.verify_http || '')}</code>
+    </div>`;
+}
+
+function copyConnLine(btn) {
+  const t = decodeURIComponent(btn.getAttribute('data-copy') || '');
+  if (!t) return;
+  navigator.clipboard.writeText(t).then(() => toast('Copied')).catch(() => toast('Copy failed', 'red'));
+}
+
 // ════ QR DEVICE PAIRING ════
 let _qrExpireTimer = null;
+let _lastQrData = '';
 
 async function showPairQR() {
   const card = document.getElementById('qrPairCard');
@@ -2742,8 +3016,11 @@ async function showPairQR() {
 
   // Fetch pairing data from server
   const r = await fetch('/api/v1/devices/pair').catch(() => null);
-  if (!r || !r.ok) { toast('Failed to generate pairing code', 'red'); return; }
+  if (!r || !r.ok) { toast('Failed to generate pairing code (need devices:manage)', 'red'); return; }
   const data = await r.json();
+  _lastQrData = data.qr_data || '';
+  const tokEl = document.getElementById('qrPairToken');
+  if (tokEl) tokEl.textContent = data.payload?.token || '—';
 
   // Render URLs
   document.getElementById('qrUrls').innerHTML = data.payload.urls
@@ -2778,6 +3055,17 @@ async function showPairQR() {
       if (el) el.textContent = 'Expired — click Refresh';
     }
   }, 1000);
+}
+
+function copyPairToken() {
+  const t = document.getElementById('qrPairToken')?.textContent?.trim();
+  if (!t || t === '—') { toast('Open Pair via QR first', 'amber'); return; }
+  navigator.clipboard.writeText(t).then(() => toast('Token copied')).catch(() => toast('Copy failed', 'red'));
+}
+
+function copyPairJson() {
+  if (!_lastQrData) { toast('Open Pair via QR first', 'amber'); return; }
+  navigator.clipboard.writeText(_lastQrData).then(() => toast('QR JSON copied')).catch(() => toast('Copy failed', 'red'));
 }
 
 // ════ NUMBER GROUPS ════
@@ -3515,7 +3803,9 @@ const PLAN_FEATURE_LABELS = {
   llm_autoresponder:'LLM Auto-Responder',scheduled_messages:'Scheduled Messages',
   analytics_advanced:'Advanced Analytics',mms:'MMS',qr_pairing:'QR Pairing',
   contacts_import:'Contacts Import',number_groups:'Number Groups',
-  recipient_groups:'Recipient Groups',api_access:'API Access'
+  recipient_groups:'Recipient Groups',api_access:'API Access',
+  forwarding_rules:'Forwarding rules (Telegram / SMS)',
+  imap_mail:'Email & IMAP (receive + SMS↔email)',
 };
 
 /**
@@ -3611,6 +3901,37 @@ function gateFeature(viewId, featureKey) {
   return true;
 }
 
+/** Gate when the user needs at least one of several plan features (e.g. Telegram tab = forwarding OR IMAP). */
+function gateFeatureAny(viewId, featureKeys) {
+  if (!_currentPlan || _currentUser?.role === 'admin') return false;
+  const hasAny = featureKeys.some(k => _currentPlan.features?.[k]);
+  if (hasAny) return false;
+  const view = document.getElementById('view-' + viewId);
+  if (!view) return true;
+  const overlay = document.createElement('div');
+  overlay.className = 'plan-gate-overlay';
+  const names = featureKeys.map(k => PLAN_FEATURE_LABELS[k] || k).join(' · ');
+  overlay.innerHTML = `
+    <div class="plan-gate-box">
+      <div style="font-size:36px;margin-bottom:12px;">🔒</div>
+      <div style="font-size:18px;font-weight:700;margin-bottom:6px;">Feature Locked</div>
+      <div style="font-size:13px;color:var(--tx2);margin-bottom:6px;">
+        Unlock this section with one of: <strong>${names}</strong>
+      </div>
+      <div style="font-size:12px;color:var(--tx3);margin-bottom:20px;">
+        You're on the <strong style="color:var(--c5);">${_currentPlan.name}</strong> plan.
+        ${_currentPlan.purchase_url ? '' : 'Contact your admin to upgrade.'}
+      </div>
+      ${_currentPlan.purchase_url
+        ? `<a href="${_currentPlan.purchase_url}" target="_blank" class="plan-gate-btn">View Plans & Upgrade →</a>`
+        : `<a href="/plans" class="plan-gate-btn">View Plans →</a>`
+      }
+    </div>`;
+  view.style.position = 'relative';
+  view.appendChild(overlay);
+  return true;
+}
+
 function removeGate(viewId) {
   const view = document.getElementById('view-' + viewId);
   if (!view) return;
@@ -3624,6 +3945,248 @@ async function myDataExport() {
   const d = await fetch('/api/v1/backup/my-data',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({passphrase:passphrase||undefined})}).then(r=>r.json()).catch(e=>({error:e.message}));
   if(d.success){ toast('Export started — check My Jobs below'); setTimeout(loadMyJobs, 1500); }
   else toast(d.error||'Failed','red');
+}
+
+async function myDataImport() {
+  const file = document.getElementById('importDataFile')?.files?.[0];
+  const mode = document.getElementById('importDataMode')?.value || 'merge';
+  if (!file) return toast('Choose a JSON file','amber');
+  let text;
+  try { text = await file.text(); } catch (e) { return toast('Could not read file','red'); }
+  let data;
+  try { data = JSON.parse(text); } catch { return toast('Invalid JSON','red'); }
+  const d = await fetch('/api/v1/backup/my-data-import',{
+    method:'POST', credentials:'include',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ mode, data }),
+  }).then(r=>r.json()).catch(e=>({error:e.message}));
+  if (d.success) toast(`Imported: ${JSON.stringify(d.imported||{})}`);
+  else toast(d.error||'Import failed','red');
+}
+
+async function loadTelegramHub() {
+  await loadForwardingRulesFor('telegram', 'forwardingBodyTelegram');
+  await loadImapRulesFor('telegram', 'imapRuleBodyTg');
+}
+
+async function loadSmsHub() {
+  await loadForwardingRulesFor('sms', 'forwardingBodySms');
+  await loadImapRulesFor('sms', 'imapRuleBodySms');
+}
+
+async function loadForwardingRulesFor(channel, tbodyId) {
+  const tb = document.getElementById(tbodyId);
+  if (!tb) return;
+  if (_currentUser?.role !== 'admin' && !_currentPlan?.features?.forwarding_rules) {
+    tb.innerHTML = '<tr><td colspan="5" style="color:var(--tx3);font-size:12px;">Add the <strong>Forwarding rules</strong> plan feature to use inbound SMS forwarding.</td></tr>';
+    return;
+  }
+  let d;
+  try {
+    const r = await fetch('/api/v1/forwarding/rules', { credentials: 'include' });
+    d = await r.json();
+    if (r.status === 402) { tb.innerHTML = '<tr><td colspan="5" style="color:var(--c5);">Upgrade plan for forwarding</td></tr>'; return; }
+  } catch (e) {
+    tb.innerHTML = '<tr><td colspan="5" style="color:var(--c6);">Failed to load</td></tr>';
+    return;
+  }
+  const rules = (d.rules || []).filter(x => x.channel === channel);
+  if (!rules.length) {
+    tb.innerHTML = '<tr><td colspan="5" style="color:var(--tx3);font-size:12px;">No rules yet.</td></tr>';
+    return;
+  }
+  tb.innerHTML = rules.map(r => {
+    const dest = r.channel === 'telegram' ? (r.dest_telegram_chat_id || '—') : (r.dest_sms_to || '—');
+    const m = [r.match_from_regex, r.match_to_regex, r.match_body_contains].filter(Boolean).join(' · ') || '—';
+    return `<tr>
+      <td style="font-weight:600;">${escapeHtml(r.name||'')}</td>
+      <td style="font-family:var(--fm);">${r.priority}</td>
+      <td style="font-family:var(--fm);font-size:11px;color:var(--c3);">${escapeHtml(String(dest))}</td>
+      <td style="font-size:11px;color:var(--tx3);max-width:200px;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(m)}</td>
+      <td><button class="btn danger xs" onclick="deleteForwardingRule('${r.id}')">Delete</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function _forwardingFieldIds(channel) {
+  if (channel === 'telegram') {
+    return { name: 'tgFrName', priority: 'tgFrPriority', from: 'tgFrFrom', to: 'tgFrTo', body: 'tgFrBody', chat: 'tgFrChat', smsTo: null };
+  }
+  return { name: 'smsFrName', priority: 'smsFrPriority', from: 'smsFrFrom', to: 'smsFrTo', body: 'smsFrBody', chat: null, smsTo: 'smsFrSmsTo' };
+}
+
+async function saveForwardingRuleFor(channel) {
+  const ids = _forwardingFieldIds(channel);
+  const body = {
+    name: document.getElementById(ids.name)?.value?.trim() || 'Rule',
+    channel,
+    priority: parseInt(document.getElementById(ids.priority)?.value || '0', 10) || 0,
+    match_from_regex: document.getElementById(ids.from)?.value?.trim() || undefined,
+    match_to_regex: document.getElementById(ids.to)?.value?.trim() || undefined,
+    match_body_contains: document.getElementById(ids.body)?.value?.trim() || undefined,
+    dest_telegram_chat_id: channel === 'telegram' ? (document.getElementById(ids.chat)?.value?.trim() || undefined) : undefined,
+    dest_sms_to: channel === 'sms' ? (document.getElementById(ids.smsTo)?.value?.trim() || undefined) : undefined,
+  };
+  const res = await fetch('/api/v1/forwarding/rules', {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const d = await res.json().catch(() => ({}));
+  if (res.ok) {
+    toast('Rule saved');
+    await loadForwardingRulesFor('telegram', 'forwardingBodyTelegram');
+    await loadForwardingRulesFor('sms', 'forwardingBodySms');
+  } else toast(d.error || 'Failed', 'red');
+}
+
+async function deleteForwardingRule(id) {
+  if (!confirm('Delete this rule?')) return;
+  const res = await fetch('/api/v1/forwarding/rules/' + encodeURIComponent(id), { method: 'DELETE', credentials: 'include' });
+  if (res.ok) {
+    toast('Deleted');
+    await loadForwardingRulesFor('telegram', 'forwardingBodyTelegram');
+    await loadForwardingRulesFor('sms', 'forwardingBodySms');
+  } else toast((await res.json().catch(()=>({}))).error || 'Failed', 'red');
+}
+
+async function loadMailHub() {
+  if (_currentUser?.role !== 'admin' && !_currentPlan?.features?.imap_mail) return;
+  await Promise.all([loadImapAccounts(), loadImapLocal()]);
+}
+
+async function loadImapAccounts() {
+  const tb = document.getElementById('imapAccBody');
+  if (!tb) return;
+  const d = await fetch('/api/v1/mail/imap-accounts', { credentials: 'include' }).then(r => r.json()).catch(() => ({}));
+  if (d.error) { tb.innerHTML = `<tr><td colspan="5" style="color:var(--c6);">${d.error}</td></tr>`; return; }
+  const rows = d.accounts || [];
+  if (!rows.length) { tb.innerHTML = '<tr><td colspan="5" style="color:var(--tx3);font-size:12px;">No IMAP accounts yet.</td></tr>'; return; }
+  tb.innerHTML = rows.map(a => `
+    <tr>
+      <td>${escapeHtml(a.name)}</td>
+      <td style="font-family:var(--fm);font-size:11px;">${escapeHtml(a.host)}:${a.port}</td>
+      <td style="font-size:11px;color:var(--tx3);">${a.last_sync_at ? a.last_sync_at.slice(0,19).replace('T',' ') : '—'}</td>
+      <td style="font-family:var(--fm);">${a.last_uid || 0}</td>
+      <td><button class="btn p xs" onclick="syncImapAccount('${a.id}')">Sync now</button>
+          <button class="btn danger xs" onclick="deleteImapAccount('${a.id}')">Delete</button></td>
+    </tr>`).join('');
+}
+
+async function saveImapAccount() {
+  const body = {
+    name: document.getElementById('imapName')?.value || 'IMAP',
+    host: document.getElementById('imapHost')?.value?.trim(),
+    port: parseInt(document.getElementById('imapPort')?.value || '993', 10),
+    username: document.getElementById('imapUser')?.value?.trim(),
+    password: document.getElementById('imapPass')?.value,
+    mailbox: document.getElementById('imapBox')?.value || 'INBOX',
+    poll_interval_sec: parseInt(document.getElementById('imapPoll')?.value || '120', 10),
+    tls: document.getElementById('imapTls')?.checked !== false,
+  };
+  if (!body.host || !body.username || !body.password) return toast('Host, username, password required', 'amber');
+  const res = await fetch('/api/v1/mail/imap-accounts', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const d = await res.json().catch(() => ({}));
+  if (res.ok) { toast('IMAP account saved'); document.getElementById('imapPass').value = ''; loadImapAccounts(); }
+  else toast(d.error || 'Failed', 'red');
+}
+
+async function syncImapAccount(id) {
+  const res = await fetch('/api/v1/mail/imap-accounts/' + encodeURIComponent(id) + '/sync', { method: 'POST', credentials: 'include' });
+  const d = await res.json().catch(() => ({}));
+  if (res.ok) { toast('Sync complete'); loadImapAccounts(); loadImapLocal(); }
+  else toast(d.error || 'Sync failed', 'red');
+}
+
+async function deleteImapAccount(id) {
+  if (!confirm('Delete this IMAP account and its local mail index?')) return;
+  const res = await fetch('/api/v1/mail/imap-accounts/' + encodeURIComponent(id), { method: 'DELETE', credentials: 'include' });
+  if (res.ok) { toast('Deleted'); loadImapAccounts(); loadImapLocal(); }
+  else toast((await res.json().catch(() => ({}))).error || 'Failed', 'red');
+}
+
+async function loadImapLocal() {
+  const tb = document.getElementById('imapLocalBody');
+  if (!tb) return;
+  const d = await fetch('/api/v1/mail/local?limit=80', { credentials: 'include' }).then(r => r.json()).catch(() => ({}));
+  const rows = d.messages || [];
+  if (!rows.length) { tb.innerHTML = '<tr><td colspan="4" style="color:var(--tx3);font-size:12px;">No mail in local index yet.</td></tr>'; return; }
+  tb.innerHTML = rows.map(m => `
+    <tr>
+      <td style="font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(m.from_addr || '')}</td>
+      <td style="font-size:12px;">${escapeHtml((m.subject || '').slice(0, 80))}</td>
+      <td style="font-size:11px;color:var(--tx3);font-family:var(--fm);">${(m.received_at || '').slice(0, 19).replace('T', ' ')}</td>
+      <td><button class="btn danger xs" onclick="deleteImapLocalMsg('${m.id}')">Delete local</button></td>
+    </tr>`).join('');
+}
+
+async function deleteImapLocalMsg(id) {
+  if (!confirm('Remove from local index only? (IMAP server unchanged)')) return;
+  const res = await fetch('/api/v1/mail/local/' + encodeURIComponent(id), { method: 'DELETE', credentials: 'include' });
+  if (res.ok) { toast('Removed locally'); loadImapLocal(); }
+  else toast((await res.json().catch(() => ({}))).error || 'Failed', 'red');
+}
+
+function _imapRuleFieldIds(channel) {
+  if (channel === 'telegram') {
+    return { name: 'tgImapName', acc: 'tgImapAccId', all: 'tgImapAll', from: 'tgImapFrom', sub: 'tgImapSub', body: 'tgImapBody', chat: 'tgImapChat', smsTo: null };
+  }
+  return { name: 'smsImapName', acc: 'smsImapAccId', all: 'smsImapAll', from: 'smsImapFrom', sub: 'smsImapSub', body: 'smsImapBody', chat: null, smsTo: 'smsImapSmsTo' };
+}
+
+async function loadImapRulesFor(channel, tbodyId) {
+  const tb = document.getElementById(tbodyId);
+  if (!tb) return;
+  if (_currentUser?.role !== 'admin' && !_currentPlan?.features?.imap_mail) {
+    tb.innerHTML = '<tr><td colspan="4" style="color:var(--tx3);font-size:12px;">Add <strong>Email &amp; IMAP</strong> to use mail-based rules.</td></tr>';
+    return;
+  }
+  const d = await fetch('/api/v1/mail/imap-rules', { credentials: 'include' }).then(r => r.json()).catch(() => ({}));
+  const rows = (d.rules || []).filter(r => r.channel === channel);
+  if (!rows.length) { tb.innerHTML = '<tr><td colspan="4" style="color:var(--tx3);font-size:12px;">No rules.</td></tr>'; return; }
+  tb.innerHTML = rows.map(r => {
+    const dest = r.channel === 'telegram' ? (r.dest_telegram_chat_id || '—') : (r.dest_sms_to || '—');
+    const mf = [r.match_all ? 'ALL' : '', r.match_from_regex, r.match_subject_contains, r.match_body_contains].filter(Boolean).join(' · ');
+    return `<tr>
+      <td>${escapeHtml(r.name)}</td>
+      <td style="font-size:11px;color:var(--tx3);max-width:180px;">${escapeHtml(mf || '—')}</td>
+      <td style="font-family:var(--fm);font-size:11px;">${escapeHtml(String(dest))}</td>
+      <td><button class="btn danger xs" onclick="deleteImapRule('${r.id}')">Delete</button></td>
+    </tr>`;
+  }).join('');
+}
+
+async function saveImapRuleFor(channel) {
+  const ids = _imapRuleFieldIds(channel);
+  const body = {
+    name: document.getElementById(ids.name)?.value?.trim() || 'Rule',
+    channel,
+    imap_account_id: document.getElementById(ids.acc)?.value?.trim() || null,
+    match_all: document.getElementById(ids.all)?.checked === true,
+    match_from_regex: document.getElementById(ids.from)?.value?.trim() || undefined,
+    match_subject_contains: document.getElementById(ids.sub)?.value?.trim() || undefined,
+    match_body_contains: document.getElementById(ids.body)?.value?.trim() || undefined,
+    dest_telegram_chat_id: channel === 'telegram' ? (document.getElementById(ids.chat)?.value?.trim() || undefined) : undefined,
+    dest_sms_to: channel === 'sms' ? (document.getElementById(ids.smsTo)?.value?.trim() || undefined) : undefined,
+    priority: 0,
+  };
+  const res = await fetch('/api/v1/mail/imap-rules', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const d = await res.json().catch(() => ({}));
+  if (res.ok) {
+    toast('Rule saved');
+    await loadImapRulesFor('telegram', 'imapRuleBodyTg');
+    await loadImapRulesFor('sms', 'imapRuleBodySms');
+  } else toast(d.error || 'Failed', 'red');
+}
+
+async function deleteImapRule(id) {
+  if (!confirm('Delete this rule?')) return;
+  const res = await fetch('/api/v1/mail/imap-rules/' + encodeURIComponent(id), { method: 'DELETE', credentials: 'include' });
+  if (res.ok) {
+    toast('Deleted');
+    await loadImapRulesFor('telegram', 'imapRuleBodyTg');
+    await loadImapRulesFor('sms', 'imapRuleBodySms');
+  } else toast((await res.json().catch(() => ({}))).error || 'Failed', 'red');
 }
 
 async function loadMyJobs() {
@@ -4299,9 +4862,6 @@ function toggleTheme() {
 (()=>{ const t=localStorage.getItem('apix_theme')||'dark'; applyTheme(t); })();
 
 // ════ VERSION / GITHUB UPDATE (semver + pre-releases) ════
-function _settingsNavEl() {
-  return document.querySelector('.sn-item[onclick*="settings"]');
-}
 async function checkForUpdate() {
   try {
     const d = await fetch('/api/v1/admin/update-check', { credentials: 'include' }).then(r=>r.json());
@@ -4696,6 +5256,7 @@ const VIEWS = [
   {label:'Dashboard',id:'dashboard'},{label:'Campaigns',id:'campaigns'},{label:'Conversations',id:'conversations'},
   {label:'Number Pool',id:'numbers'},{label:'Devices',id:'devices'},{label:'Settings',id:'settings'},
   {label:'Contacts',id:'contacts'},{label:'Opt-outs',id:'optouts'},{label:'Templates',id:'templates'},
+  {label:'Mail',id:'mail'},{label:'Telegram',id:'telegram'},{label:'SMS automation',id:'sms'},
   {label:'Webhooks',id:'webhooks'},{label:'AI / LLM',id:'llm'},{label:'Analytics',id:'analytics'},
   {label:'API Keys',id:'apikeys'},{label:'Scheduled Messages',id:'scheduled'},
   {label:'Number Groups',id:'numgroups'},{label:'Recipient Groups',id:'rcptgroups'},

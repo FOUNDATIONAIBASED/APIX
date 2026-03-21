@@ -32,6 +32,38 @@ router.get('/', requirePerm('devices:view'), (req, res) => {
     res.json({ devices: enriched, total: enriched.length });
 });
 
+// GET /api/v1/devices/server-info — WebSocket URLs & mDNS (no token; read-only)
+router.get('/server-info', requirePerm('devices:view'), (req, res) => {
+    const wsUrls = [];
+    for (const ifaces of Object.values(os.networkInterfaces())) {
+        for (const iface of ifaces) {
+            if (iface.family === 'IPv4' && !iface.internal) {
+                wsUrls.push(`ws://${iface.address}:${cfg.port}/ws`);
+            }
+        }
+    }
+    if (!wsUrls.length) wsUrls.push(`ws://127.0.0.1:${cfg.port}/ws`);
+
+    const xfProto = (req.headers['x-forwarded-proto'] || '').split(',')[0].trim();
+    const proto = xfProto || (req.secure ? 'https' : 'http');
+    const host = req.get('host') || `127.0.0.1:${cfg.port}`;
+    const managementUrl = `${proto}://${host}`;
+
+    res.json({
+        port: cfg.port,
+        mdns_name: cfg.mdnsName || 'ApiX Gateway',
+        mdns_enabled: cfg.mdnsEnabled,
+        mdns_service: '_apix._tcp.local',
+        ws_urls: wsUrls,
+        management_url: managementUrl,
+        manual_pairing: {
+            summary: 'Generate a pairing token (Devices → Pair via QR, or GET /api/v1/devices/pair with devices:manage). Enter the WebSocket URL reachable from the phone and the token in the Agent app.',
+            verify_http: `${managementUrl}/api/v1/devices/verify-token`,
+            websocket_path: '/ws',
+        },
+    });
+});
+
 // GET /api/v1/devices/pair  — admin or mod can generate QR pairing token
 router.get('/pair', canManage, (req, res) => {
     const token = crypto.randomBytes(16).toString('hex');
@@ -101,11 +133,13 @@ router.delete('/:id', canManage, (req, res) => {
 
 // PATCH /api/v1/devices/:id  — requires devices:manage
 router.patch('/:id', canManage, (req, res) => {
-    const { status, name } = req.body;
+    const { status, name, user_id } = req.body;
     const db = require('../db').getDb();
+    const { Devices } = require('../db');
     if (status) db.prepare('UPDATE devices SET status=? WHERE id=?').run(status, req.params.id);
     if (name)   db.prepare('UPDATE devices SET name=? WHERE id=?').run(name, req.params.id);
-    res.json({ success: true });
+    if (user_id !== undefined) Devices.setUserId(req.params.id, user_id || null);
+    res.json({ success: true, device: Devices.findById(req.params.id) });
 });
 
 module.exports = router;

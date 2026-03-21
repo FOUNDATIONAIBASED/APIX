@@ -34,6 +34,8 @@
  *
  * ── Per-user export ─────────────────────────────────────────────
  * POST /api/v1/backup/my-data           self-export (auth user)
+ * POST /api/v1/backup/my-data-import    restore from JSON (merge|replace)
+ * GET  /api/v1/backup/my-data-json       raw JSON download (for re-import / migration)
  * GET  /api/v1/backup/my-jobs           own jobs (auth user)
  */
 const router   = require('express').Router();
@@ -370,6 +372,18 @@ router.post('/schedules/:id/toggle', requireAdmin, (req, res) => {
 
 // ════ PER-USER EXPORT ══════════════════════════════════════════
 
+// GET /my-data-json — synchronous JSON (same payload as encrypted export, for import / merge)
+router.get('/my-data-json', requireAuth(), (req, res) => {
+    const userId = req.user.uid || req.user.user_id;
+    const buf = engine.exportUserData(userId);
+    if (!buf) return res.status(404).json({ error: 'User not found' });
+    const u = Users.findById(userId);
+    const uname = (u?.username || 'user').replace(/[^\w.-]/g, '_');
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="apix-user-export-${uname}.json"`);
+    res.send(buf);
+});
+
 // POST /my-data — authenticated user exports their own data
 router.post('/my-data', requireAuth(), async (req, res) => {
     const userId     = req.user.uid || req.user.user_id;
@@ -381,6 +395,22 @@ router.post('/my-data', requireAuth(), async (req, res) => {
         options: { passphrase: passphrase || undefined },
     });
     res.status(202).json({ success: true, job_id: jobId, stream_url: `/api/v1/backup/jobs/${jobId}/stream` });
+});
+
+// POST /my-data-import — JSON body { mode: 'merge'|'replace', data: { version, user, ... } }
+router.post('/my-data-import', requireAuth(), (req, res) => {
+    const userId = req.user.uid || req.user.user_id;
+    const mode = (req.body?.mode || 'merge').toLowerCase();
+    const data = req.body?.data;
+    if (!['merge', 'replace'].includes(mode)) return res.status(400).json({ error: 'mode must be merge or replace' });
+    if (!data || typeof data !== 'object') return res.status(400).json({ error: 'data object required (same schema as user JSON export)' });
+    try {
+        const result = engine.importUserData(userId, data, mode);
+        if (!result.ok) return res.status(400).json(result);
+        res.json({ success: true, ...result });
+    } catch (e) {
+        res.status(500).json({ error: e.message || 'Import failed' });
+    }
 });
 
 // GET /my-jobs — own backup jobs
